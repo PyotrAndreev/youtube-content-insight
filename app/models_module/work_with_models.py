@@ -1,5 +1,6 @@
 from sqlalchemy import exists
 
+from .db_architecture import VideoStatsLast, ChannelStatsLast
 from ..models_module import db_architecture
 from ..models_module import db_sessions
 from datetime import datetime, timezone
@@ -31,18 +32,29 @@ def save_channel_info(channel_info: dict, channel_id: str):
                                                                                                                None),
             brandingSettingsChannelUnsubscribedTrailer=channel_info.get('brandingSettings', {}).get('channel', {}).get(
                 'unsubscribedTrailer', None))
+        channel_stats_imp = db_architecture.ChannelStatsLast(
+            channelId=channel_id,
+            viewCount=channel_info.get('statistics', {}).get('viewCount', None),
+            subscribersCount=channel_info.get('statistics', {}).get('subscriberCount', None),
+            hiddenSubscriberCount=channel_info.get('statistics', {}).get('hiddenSubscriberCount', None),
+            videoCount=channel_info.get('statistics', {}).get('videoCount', None),
+            topicCategories=channel_info.get('topicDetails', {}).get('topicCategories', None),
+            parsingDate=datetime.now(timezone.utc).replace(microsecond=0)
+        )
         db_sessions.session.add(channel_imp)
-    channel_stats_imp = db_architecture.ChannelStatsLast(
-        channelId=channel_id,
-        viewCount=channel_info.get('statistics', {}).get('viewCount', None),
-        subscribersCount=channel_info.get('statistics', {}).get('subscriberCount', None),
-        hiddenSubscriberCount=channel_info.get('statistics', {}).get('hiddenSubscriberCount', None),
-        videoCount=channel_info.get('statistics', {}).get('videoCount', None),
-        topicCategories=channel_info.get('topicDetails', {}).get('topicCategories', None),
-        parsingDate=datetime.now(timezone.utc).replace(microsecond=0)
-    )
-    db_sessions.session.add(channel_stats_imp)
-    db_sessions.session.commit()
+        db_sessions.session.add(channel_stats_imp)
+        db_sessions.session.commit()
+    else:
+        q = db_sessions.session.query(ChannelStatsLast)
+        q = q.filter(ChannelStatsLast.channelId == channel_id)
+        record = q.one()
+        record.viewCount = channel_info.get('statistics', {}).get('viewCount', None)
+        record.subscribersCount = channel_info.get('statistics', {}).get('subscriberCount', None)
+        record.hiddenSubscriberCount = channel_info.get('statistics', {}).get('hiddenSubscriberCount', None)
+        record.videoCount = channel_info.get('statistics', {}).get('videoCount', None)
+        record.topicCategories = channel_info.get('topicDetails', {}).get('topicCategories', None)
+        record.parsingDate = datetime.now(timezone.utc).replace(microsecond=0)
+        db_sessions.session.commit()
 
 
 def save_video_info(video_info: dict, video_api_info: dict, channel_id: str, video_id: str):
@@ -72,20 +84,34 @@ def save_video_info(video_info: dict, video_api_info: dict, channel_id: str, vid
             madeForKids=video_info.get('status', {}).get('madeForKids', None))
         db_sessions.session.add(video_imp)
 
-    video_stats_imp = db_architecture.VideoStatsLast(
-        videoId=video_id,
-        liveBroadcastContent=video_info.get('snippet', {}).get('liveBroadcastContent', None),
-        viewsCount=video_info.get('statistics', {}).get('viewCount', None),
-        likesCount=video_info.get('statistics', {}).get('likeCount', None),
-        likesFromApi=video_api_info.get('likes', None),
-        dislikesFromApi=video_api_info.get('dislikes', None),
-        ratingFromApi=video_api_info.get('rating', None),
-        favoriteCount=video_info.get('statistics', {}).get('favoriteCount', None),
-        commentCount=video_info.get('statistics', {}).get('commentCount', None),
-        parsingDate = datetime.now(timezone.utc).replace(microsecond=0)
-    )
-    db_sessions.session.add(video_stats_imp)
-    db_sessions.session.commit()
+        video_stats_imp = db_architecture.VideoStatsLast(
+            videoId=video_id,
+            liveBroadcastContent=video_info.get('snippet', {}).get('liveBroadcastContent', None),
+            viewsCount=video_info.get('statistics', {}).get('viewCount', None),
+            likesCount=video_info.get('statistics', {}).get('likeCount', None),
+            likesFromApi=video_api_info.get('likes', None),
+            dislikesFromApi=video_api_info.get('dislikes', None),
+            ratingFromApi=video_api_info.get('rating', None),
+            favoriteCount=video_info.get('statistics', {}).get('favoriteCount', None),
+            commentCount=video_info.get('statistics', {}).get('commentCount', None),
+            parsingDate=datetime.now(timezone.utc).replace(microsecond=0)
+        )
+        db_sessions.session.add(video_stats_imp)
+        db_sessions.session.commit()
+    else:
+        q = db_sessions.session.query(VideoStatsLast)
+        q = q.filter(VideoStatsLast.videoId == video_id)
+        record = q.one()
+        record.liveBroadcastContent = video_info.get('snippet', {}).get('liveBroadcastContent', None),
+        record.viewsCount = video_info.get('statistics', {}).get('viewCount', None),
+        record.likesCount = video_info.get('statistics', {}).get('likeCount', None),
+        record.likesFromApi = video_api_info.get('likes', None),
+        record.dislikesFromApi = video_api_info.get('dislikes', None),
+        record.ratingFromApi = video_api_info.get('rating', None),
+        record.favoriteCount = video_info.get('statistics', {}).get('favoriteCount', None),
+        record.commentCount = video_info.get('statistics', {}).get('commentCount', None),
+        record.parsingDate = datetime.now(timezone.utc).replace(microsecond=0)
+        db_sessions.session.commit()
 
 
 def save_comments(comment: dict, comment_id: str):

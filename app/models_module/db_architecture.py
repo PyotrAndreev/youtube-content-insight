@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import text
 from ..models_module.db_sessions import engine
+# import db_sessions
 Base = declarative_base()
 
 
@@ -71,8 +72,8 @@ class Channel(Base):
     videos = relationship('Video', back_populates='channel')
     # authored_comments = relationship('Comment', back_populates='author_channel', foreign_keys='Comment.authorChannelId')
     received_comments = relationship('Comment', back_populates='target_channel', foreign_keys='Comment.channelId')
-    channel_stats_lasts = relationship('ChannelStatsLast', back_populates='channel')
-    channel_stats_hists = relationship('ChannelStatsLast', back_populates='channel')
+    channel_stats_last = relationship('ChannelStatsLast', back_populates='channel')
+    channel_stats_hist = relationship('ChannelStatsHist', back_populates='channel')
 
     def __repr__(self):
         return (f"<Channel(id={self.id}, title='{self.title}', description='{self.description}', "
@@ -83,7 +84,7 @@ class ChannelStatsLast(Base):
     __tablename__ = 'channels_stats_last'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    channelId = Column(String, ForeignKey('channels.channelId'))
+    channelId = Column(String, ForeignKey('channels.channelId'), nullable=False)
     viewCount = Column(BigInteger, nullable=True)
     subscribersCount = Column(BigInteger, nullable=True)
     hiddenSubscriberCount = Column(Boolean, nullable=True)
@@ -91,7 +92,7 @@ class ChannelStatsLast(Base):
     topicCategories = Column(ARRAY(String), nullable=True)
     parsingDate = Column(DateTime, nullable=False)
 
-    channel = relationship('Channel', back_populates='channel_stats_lasts')
+    channel = relationship('Channel', back_populates='channel_stats_last')
 
 
 class ChannelStatsHist(Base):
@@ -106,7 +107,7 @@ class ChannelStatsHist(Base):
     topicCategories = Column(ARRAY(String), nullable=True)
     parsingDate = Column(DateTime, nullable=False)
 
-    channel = relationship('Channel', back_populates='channel_stats_hists')
+    channel = relationship('Channel', back_populates='channel_stats_hist')
 
 
 class Video(Base):
@@ -179,7 +180,7 @@ class Video(Base):
     subtitles = relationship('Subtitle', back_populates='video')
     comments = relationship('Comment', back_populates='video')
     video_stats_last = relationship('VideoStatsLast', back_populates='video')
-    video_stats_hist = relationship('VideoStatsLast', back_populates='video')
+    video_stats_hist = relationship('VideoStatsHist', back_populates='video')
 
     def __repr__(self):
         return (f"<Video(id={self.id}, publishedAt='{self.publishedAt}', channelId={self.channelId}, "
@@ -192,7 +193,7 @@ class VideoStatsLast(Base):
     __tablename__ = 'videos_stats_last'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    videoId = Column(String, ForeignKey('videos.videoId'), nullable=False)
+    videoId = Column(String, ForeignKey('videos.videoId'), nullable=False, unique=True)
     liveBroadcastContent = Column(String, nullable=True)
     viewsCount = Column(BigInteger, nullable=True)
     likesCount = Column(BigInteger, nullable=True)
@@ -320,7 +321,7 @@ class Comment(Base):
 def trigger_to_hist_table(table_name_last: str, column_names: set):
     table_name_hist = table_name_last.replace('_last', '_hist')
     return text(f"""
-                CREATE OR REPLACE FUNCTION {table_name_last.replace('_hist', '')}_to_hist()
+                CREATE OR REPLACE FUNCTION {table_name_last + "_to_hist()"}
                 RETURNS TRIGGER AS $$
                 BEGIN
                     INSERT INTO {table_name_hist} ({', '.join(column_names)})
@@ -329,10 +330,10 @@ def trigger_to_hist_table(table_name_last: str, column_names: set):
                 END;
                 $$ LANGUAGE plpgsql;
                 
-                CREATE TRIGGER {table_name_last}_to_hist_table
+                CREATE TRIGGER {table_name_last + "_to_hist_table"}
                 BEFORE UPDATE ON {table_name_last}
                 FOR EACH ROW
-                EXECUTE FUNCTION {table_name_last.replace('_hist', '')}_to_hist();
+                EXECUTE FUNCTION {table_name_last + "_to_hist()"};
                 """)
 
 
