@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    BigInteger, Column, ForeignKey, Boolean, String, Time, Double, DateTime, ARRAY
+    BigInteger, Column, ForeignKey, Boolean, String, Time, Double, DateTime, ARRAY, DDL
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import declarative_base
@@ -318,34 +318,34 @@ class Comment(Base):
                 f"updatedAt='{self.updatedAt}')>")
 
 
-def trigger_to_hist_table(table_name_last: str, column_names: set):
-    table_name_hist = table_name_last.replace('_last', '_hist')
-    return text(f"""
-                CREATE OR REPLACE FUNCTION {table_name_last + "_to_hist()"}
+Base.metadata.create_all(db_sessions.engine)
+
+with db_sessions.engine.connect() as connection:
+    trigger_for_channel_info = DDL("""CREATE OR REPLACE FUNCTION channels_stats_last_to_hist()
                 RETURNS TRIGGER AS $$
                 BEGIN
-                    INSERT INTO {table_name_hist} ({', '.join(column_names)})
-                    VALUES ({', '.join(map(lambda item: 'OLD.' + item, column_names))});
+                    INSERT INTO channels_stats_hist ("videoCount", "parsingDate", "channelId", "topicCategories", "viewCount", "subscribersCount", "hiddenSubscriberCount")
+                    VALUES (OLD."videoCount", OLD."parsingDate", OLD."channelId", OLD."topicCategories", OLD."viewCount", OLD."subscribersCount", OLD."hiddenSubscriberCount");
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE 'plpgsql';
+                
+                CREATE TRIGGER channels_stats_last_to_hist_table
+                BEFORE UPDATE ON channels_stats_last
+                FOR EACH ROW
+                EXECUTE FUNCTION channels_stats_last_to_hist();""")
+    trigger_for_video_info = DDL("""CREATE OR REPLACE FUNCTION videos_stats_last_to_hist()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    INSERT INTO videos_stats_hist ("favoriteCount", "dislikesFromApi", "videoId", "parsingDate", "likesCount", "liveBroadcastContent", "viewsCount", "commentCount", "likesFromApi", "ratingFromApi")
+                    VALUES (OLD."favoriteCount", OLD."dislikesFromApi", OLD."videoId", OLD."parsingDate", OLD."likesCount", OLD."liveBroadcastContent", OLD."viewsCount", OLD."commentCount", OLD."likesFromApi", OLD."ratingFromApi");
                     RETURN NEW;
                 END;
                 $$ LANGUAGE plpgsql;
                 
-                CREATE TRIGGER {table_name_last + "_to_hist_table"}
-                BEFORE UPDATE ON {table_name_last}
+                CREATE TRIGGER videos_stats_last_to_hist_table
+                BEFORE UPDATE ON videos_stats_last
                 FOR EACH ROW
-                EXECUTE FUNCTION {table_name_last + "_to_hist()"};
-                """)
-
-
-Base.metadata.create_all(engine)
-
-with engine.connect() as connection:
-    all_tables = Base.metadata.tables
-    # leave only table names where '_last' ends
-    tables_name_last = [name for name in all_tables if '_last' in name]
-
-    for name in tables_name_last:
-        table = all_tables[name]
-        columns = {column.name for column in table.columns} - {'id'}
-        # execute trigger
-        connection.execute(trigger_to_hist_table(table_name_last=name, column_names=columns))
+                EXECUTE FUNCTION videos_stats_last_to_hist();""")
+    connection.execute(trigger_for_channel_info)
+    connection.execute(trigger_for_video_info)
