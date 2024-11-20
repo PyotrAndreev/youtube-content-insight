@@ -1,12 +1,21 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import (
-    BigInteger, Column, ForeignKey, Boolean, String, Time, Double, DateTime, ARRAY, DDL
+    BigInteger, Column, ForeignKey, Boolean, String, Time, Double, DateTime, ARRAY, DDL, Enum, create_engine
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import declarative_base
+from enum import Enum as PyEnum
 from sqlalchemy.sql import text
-from ..models_module.db_sessions import engine
-# import db_sessions
 Base = declarative_base()
+
+
+class Source(PyEnum):
+    relevance = 'relevance'
+    raing = 'rating'
+    date = 'date'
+    query = 'query'
 
 
 class Channel(Base):
@@ -292,7 +301,6 @@ class Comment(Base):
     authorProfileImageUrl = Column(String)
     authorChannelUrl = Column(String)
     authorChannelId = Column(String)
-    # authorChannelId = Column(String, ForeignKey('channels.channelId'))
     channelId = Column(String, ForeignKey('channels.channelId'))
     textDisplay = Column(String)
     textOriginal = Column(String)
@@ -302,6 +310,7 @@ class Comment(Base):
     likeCount = Column(BigInteger)
     publishedAt = Column(DateTime)
     updatedAt = Column(DateTime)
+    gotFrom = Column(Enum(Source))
 
     # Relationships
     video = relationship('Video', back_populates='comments')
@@ -318,9 +327,20 @@ class Comment(Base):
                 f"updatedAt='{self.updatedAt}')>")
 
 
-Base.metadata.create_all(db_sessions.engine)
+load_dotenv()
 
-with db_sessions.engine.connect() as connection:
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+
+engine = create_engine(f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_NAME}')
+
+Base.metadata.create_all(engine)
+
+with engine.connect() as connection:
     trigger_for_channel_info = DDL("""CREATE OR REPLACE FUNCTION channels_stats_last_to_hist()
                 RETURNS TRIGGER AS $$
                 BEGIN

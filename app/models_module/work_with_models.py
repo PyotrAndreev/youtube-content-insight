@@ -1,9 +1,13 @@
-from sqlalchemy import exists
+import logging
 
+from sqlalchemy import exists
 from .db_architecture import VideoStatsLast, ChannelStatsLast
 from ..models_module import db_architecture
 from ..models_module import db_sessions
 from datetime import datetime, timezone
+from .db_architecture import Source
+
+logging.basicConfig(level=logging.INFO)
 
 
 def save_channel_info(channel_info: dict, channel_id: str):
@@ -44,6 +48,8 @@ def save_channel_info(channel_info: dict, channel_id: str):
         db_sessions.session.add(channel_imp)
         db_sessions.session.add(channel_stats_imp)
         db_sessions.session.commit()
+        logging.info(f'Saved channel info for {channel_id} successfully')
+
     else:
         q = db_sessions.session.query(ChannelStatsLast)
         q = q.filter(ChannelStatsLast.channelId == channel_id)
@@ -55,6 +61,7 @@ def save_channel_info(channel_info: dict, channel_id: str):
         record.topicCategories = channel_info.get('topicDetails', {}).get('topicCategories', None)
         record.parsingDate = datetime.now(timezone.utc).replace(microsecond=0)
         db_sessions.session.commit()
+        logging.info(f'Update channel stats for {channel_id} successfully')
 
 
 def save_video_info(video_info: dict, video_api_info: dict, channel_id: str, video_id: str):
@@ -98,6 +105,7 @@ def save_video_info(video_info: dict, video_api_info: dict, channel_id: str, vid
         )
         db_sessions.session.add(video_stats_imp)
         db_sessions.session.commit()
+        logging.info(f'Save video info for {video_id} successfully')
     else:
         q = db_sessions.session.query(VideoStatsLast)
         q = q.filter(VideoStatsLast.videoId == video_id)
@@ -112,6 +120,7 @@ def save_video_info(video_info: dict, video_api_info: dict, channel_id: str, vid
         record.commentCount = video_info.get('statistics', {}).get('commentCount', None),
         record.parsingDate = datetime.now(timezone.utc).replace(microsecond=0)
         db_sessions.session.commit()
+        logging.info(f'Update video stats for {video_id} successfully')
 
 
 def save_comments(comment: dict, comment_id: str):
@@ -130,9 +139,12 @@ def save_comments(comment: dict, comment_id: str):
             viewerRating=comment.get('viewerRating', None),
             likeCount=comment.get('likeCount', None),
             publishedAt=comment.get('publishedAt', None),
-            updatedAt=comment.get('updatedAt', None))
+            updatedAt=comment.get('updatedAt', None),
+            gotFrom=Source.query
+        )
         db_sessions.session.add(comment_imp)
         db_sessions.session.commit()
+        logging.info(f'Save comment for {comment_id} successfully')
 
 
 def check_exists_video_by_id(video_id: str):

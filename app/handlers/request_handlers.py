@@ -3,9 +3,11 @@ import re
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
+import logging
 import requests
 from ..parsing_module import get_info
 
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
@@ -14,6 +16,7 @@ youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 
 def get_latest_videos(channel_id, max_results):
+    logging.info(f'Start getting last videos from {channel_id}')
     request = youtube.search().list(part='id', channelId=channel_id, order='date', maxResults=max_results)
     response = request.execute()
     if max_results == 0 or response['pageInfo']['totalResults'] < max_results:
@@ -27,6 +30,7 @@ def get_latest_videos(channel_id, max_results):
         response = request.execute()
         video_ids += [item['id']['videoId'] for item in response['items'] if item['id']['kind'] == 'youtube#video']
         next_page_token = response.get('nextPageToken', None)
+    logging.info(f'End getting last videos from {channel_id}, finally find - {len(video_ids)} videos')
     return video_ids
 
 
@@ -38,8 +42,9 @@ def get_channel_handle_by_url(channel_url: str) -> str | None:
     for pattern in patterns:
         match = re.match(pattern, channel_url)
         if match:
+            logging.info(f'Get channel handle from URL: {match.group(1)}')
             return match.group(1)
-    return None
+    raise ValueError(f'Could not find channel handle from URL: {channel_url}')
 
 
 def get_channel_id(channel_handle: str):
@@ -52,13 +57,15 @@ def get_channel_id(channel_handle: str):
     if response.status_code == 200:
         data = response.json()
         if 'items' in data and len(data['items']) > 0:
+
+            logging.info('Get channel id from URL: ' + str(data['items'][0]['id']))
             return data['items'][0]['id']
         else:
-            print("Канал не найден.")
-            return None
+
+            raise ValueError(f'Could not get channel id from URL: {channel_handle}')
     else:
-        print(f"Ошибка запроса: {response.status_code}")
-        return None
+        logging.error("Request to get channel id failed with status code: " + str(response.status_code))
+        raise ValueError(f'Request to get channel id failed with status code: {response.status_code}')
 
 
 def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
@@ -67,8 +74,6 @@ def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
     get_info.get_channel_info(channel_id)
 
     video_ids = get_latest_videos(channel_id, video_count)
-    print(*video_ids)
-    print(len(video_ids))
 
     for video_id in video_ids:
         get_info.get_video_details(video_id)
