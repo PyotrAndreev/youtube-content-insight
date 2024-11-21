@@ -14,6 +14,49 @@ YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/'
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 
+class RetryableRequestError(Exception):
+    def __init__(self, request, *args):
+        super().__init__(*args)
+        self.request = request
+
+    def __str__(self):
+        return super().__str__() + "\n" + repr(self.request)
+
+
+def get_info_from_dislike_api(video_id: str):
+    url_api = 'https://returnyoutubedislikeapi.com/votes'
+    params = {
+        'videoId': video_id,
+    }
+    response = requests.get(url_api, params=params, headers={
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+        "Pragma": "no-cache", "Cache-Control": "no-cache",
+        "Connection": "keep-alive"})
+    if response.status_code == 200:
+        video_api = response.json()
+        return video_api
+    elif response.status_code == 520:
+        raise RetryableRequestError([url_api, params], response.status_code, response.text)
+    else:
+        raise Exception(response.status_code, response.text)
+
+
+def with_retry(func, retry_cnt):
+    exception = None
+    retry_cnt = max(retry_cnt, 0)
+    for i in range(retry_cnt + 1):
+        try:
+            res = func()
+            return res
+        except RetryableRequestError as e:
+            exception = e
+            continue
+        except Exception as e:
+            logger.error("Unexpected error \t" + str(e))
+            raise
+    logger.error(f"After {retry_cnt} tries got \t" + str(exception))
+
+
 def get_video_details(video_id: str):
     url = f'{YOUTUBE_API_URL}videos'
     params = {
@@ -31,20 +74,8 @@ def get_video_details(video_id: str):
         if not work_with_models.check_exists_channel_by_id(channel_id):
             get_channel_info(channel_id)
 
-        urlApi = 'https://returnyoutubedislikeapi.com/votes'
-        params = {
-            'videoId': video_id,
-        }
-        response2 = requests.get(urlApi, params=params, headers={
-             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
-             "Pragma": "no-cache", "Cache-Control": "no-cache",
-             "Connection": "keep-alive"})
-
-        if response2.status_code == 200:
-            videoApi = response2.json()
-            work_with_models.save_video_info(video_info, videoApi, channel_id, video_id)
-        else:
-            raise Exception("Dislike API: Status code " + str(response2.status_code))
+        video_api = with_retry(lambda: get_info_from_dislike_api(video_id), 5)
+        work_with_models.save_video_info(video_info, video_api, channel_id, video_id)
     else:
         raise Exception("Youtube API: Status code " + str(response.status_code))
 
@@ -94,7 +125,7 @@ def fetch_comments(video_id: str):
             logging.info(' Parsing successfully {counter} comments for video_id - {video_id}'.format(
                 counter=counter, video_id=video_id))
             if 'nextPageToken' in response:
-                logging.info('Parsing next page token - ' + response['nextPageToken'] + 'for video '+ video_id)
+                logging.info('Parsing next page token - ' + response['nextPageToken'] + 'for video ' + video_id)
                 response = youtube.commentThreads().list(
                     part='snippet',
                     videoId=video_id,
