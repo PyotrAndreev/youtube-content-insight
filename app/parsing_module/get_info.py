@@ -66,43 +66,46 @@ def get_channel_info(channel_id):
 
 def fetch_comments(video_id: str):
     counter = 0
-    response = youtube.commentThreads().list(
-        part='snippet, replies',
-        videoId=video_id,
-        textFormat='plainText',
-        maxResults=100
-    )
-    try:
-        response = response.execute()
-        logging.info('Get first comments for video {}'.format(video_id))
-    except Exception as e:
-        # video has no comments
-        return
-    while response:
-        for item in response['items']:
-            comment_id = item['snippet']['topLevelComment']['id']
-            comment = item['snippet']['topLevelComment']['snippet']
-            work_with_models.save_comments(comment, comment_id)
-            counter += 1
-            if 'replies' in item:
-                for reply in item['replies']['comments']:
-                    reply_comment_id = reply['id']
-                    reply_comment = reply['snippet']
-                    work_with_models.save_comments(reply_comment, reply_comment_id)
-                    counter += 1
-        logging.info(' Parsing successfully {counter} comments for video_id - {video_id}'.format(
-            counter=counter, video_id=video_id))
-        if 'nextPageToken' in response:
-            logging.info('Parsing next page token - ' + response['nextPageToken'] + 'for video '+ video_id)
-            response = youtube.commentThreads().list(
-                part='snippet',
-                videoId=video_id,
-                textFormat='plainText',
-                maxResults=100,
-                pageToken=response['nextPageToken']
-            ).execute()
-        else:
-            break
+    if work_with_models.check_is_comments_available(video_id):
+        response = youtube.commentThreads().list(
+            part='snippet, replies',
+            videoId=video_id,
+            textFormat='plainText',
+            maxResults=100
+        )
+        try:
+            response = response.execute()
+            logging.info('Get first comments for video {}'.format(video_id))
+        except Exception as e:
+            # video has no comments
+            return
+        while response:
+            for item in response['items']:
+                comment_id = item['snippet']['topLevelComment']['id']
+                comment = item['snippet']['topLevelComment']['snippet']
+                work_with_models.save_comments(comment, comment_id)
+                counter += 1
+                if 'replies' in item:
+                    for reply in item['replies']['comments']:
+                        reply_comment_id = reply['id']
+                        reply_comment = reply['snippet']
+                        work_with_models.save_comments(reply_comment, reply_comment_id)
+                        counter += 1
+            logging.info(' Parsing successfully {counter} comments for video_id - {video_id}'.format(
+                counter=counter, video_id=video_id))
+            if 'nextPageToken' in response:
+                logging.info('Parsing next page token - ' + response['nextPageToken'] + 'for video '+ video_id)
+                response = youtube.commentThreads().list(
+                    part='snippet',
+                    videoId=video_id,
+                    textFormat='plainText',
+                    maxResults=100,
+                    pageToken=response['nextPageToken']
+                ).execute()
+            else:
+                break
+    else:
+        logging.info(f'Video {video_id} has no comments available.')
 
 
 def get_transcript(video_id: str) -> list[dict]:

@@ -172,3 +172,9 @@ def check_exists_comment_by_id(comment_id: str):
         return True
     else:
         return False
+
+def check_is_comments_available(video_id: str):
+    video_el = db_sessions.session.query(db_architecture.VideoStatsLast).filter(db_architecture.Video.videoId == video_id).first()
+    if video_el.commentCount > 0:
+        return True
+    return False
