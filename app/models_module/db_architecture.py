@@ -7,7 +7,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import declarative_base
 from enum import Enum as PyEnum
-from sqlalchemy.sql import text
 Base = declarative_base()
 
 

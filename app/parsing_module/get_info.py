@@ -44,7 +44,7 @@ def get_video_details(video_id: str):
             videoApi = response2.json()
             work_with_models.save_video_info(video_info, videoApi, channel_id, video_id)
         else:
-            raise Exception("Dislike API: Status code " + str(response.status_code))
+            raise Exception("Dislike API: Status code " + str(response2.status_code))
     else:
         raise Exception("Youtube API: Status code " + str(response.status_code))
 
