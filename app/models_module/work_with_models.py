@@ -1,11 +1,11 @@
 import logging
 
 from sqlalchemy import exists
-from .db_architecture import VideoStatsLast, ChannelStatsLast
+from .db_architecture import VideoStatsLast, ChannelStatsLast, Context
 from ..models_module import db_architecture
 from ..models_module import db_sessions
 from datetime import datetime, timezone
-from .db_architecture import Source
+from .db_architecture import Source, Status
 
 logging.basicConfig(level=logging.INFO)
 
@@ -145,6 +145,68 @@ def save_comments(comment: dict, comment_id: str):
         db_sessions.session.add(comment_imp)
         db_sessions.session.commit()
         logging.info(f'Save comment for {comment_id} successfully')
+
+
+def create_channel_context(channel_id: str):
+    context_imp = db_architecture.Context(
+        channelId=channel_id,
+        status=Status.parsing_channel,
+        date=datetime.now(timezone.utc).replace(microsecond=0)
+    )
+    db_sessions.session.add(context_imp)
+    db_sessions.session.commit()
+    logging.info(f'Create channel context for {channel_id} successfully')
+
+
+def finish_channel_context(channel_id: str):
+    q = db_sessions.session.query(Context)
+    q = q.filter(Context.channelId == channel_id)
+    record = q.one()
+    record.status = Status.finish
+    record.date = datetime.now(timezone.utc).replace(microsecond=0)
+    db_sessions.session.commit()
+    logging.info(f'Finish channel context for {channel_id} successfully')
+
+
+def create_video_context(video_id: str):
+    context_imp = db_architecture.Context(
+        videoId=video_id,
+        status=Status.parsing_video,
+        date=datetime.now(timezone.utc).replace(microsecond=0)
+    )
+    db_sessions.session.add(context_imp)
+    db_sessions.session.commit()
+    logging.info(f'Create video context for {video_id} successfully')
+
+
+def finish_video_context(video_id: str):
+    q = db_sessions.session.query(Context)
+    q = q.filter(Context.videoId == video_id)
+    record = q.one()
+    record.status = Status.parsing_comments
+    record.date = datetime.now(timezone.utc).replace(microsecond=0)
+    db_sessions.session.commit()
+    logging.info(f'Finish video context for {video_id} successfully')
+
+
+def update_comments_context(video_id: str, comment_page_id: str):
+    q = db_sessions.session.query(Context)
+    q = q.filter(Context.videoId == video_id)
+    record = q.one()
+    record.commentPageId = comment_page_id
+    record.date = datetime.now(timezone.utc).replace(microsecond=0)
+    db_sessions.session.commit()
+    logging.info(f'Update comment context for {video_id} starts parsing from {comment_page_id} page')
+
+
+def finish_comment_context(video_id: str):
+    q = db_sessions.session.query(Context)
+    q = q.filter(Context.videoId == video_id)
+    record = q.one()
+    record.status = Status.finish
+    record.date = datetime.now(timezone.utc).replace(microsecond=0)
+    db_sessions.session.commit()
+    logging.info(f'Finish comment context for {video_id} successfully')
 
 
 def check_exists_video_by_id(video_id: str):

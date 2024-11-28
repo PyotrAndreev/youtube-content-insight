@@ -440,11 +440,11 @@ class Context(Base):
     __tablename__ = 'context'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    channelId = Column(String, nullable=False)
+    channelId = Column(String, nullable=True)
     videoId = Column(String, nullable=True)
     commentPageId = Column(String, nullable=True)
-    status = Column(String, nullable=True)
-    date = Column(Enum(Status))
+    status = Column(Enum(Status), nullable=True)
+    date = Column(DateTime)
 
 
 load_dotenv()
@@ -459,33 +459,33 @@ DB_NAME = os.getenv("DB_NAME")
 engine = create_engine(f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_NAME}')
 
 Base.metadata.create_all(engine)
-
-with engine.connect() as connection:
-    trigger_for_channel_info = DDL("""CREATE OR REPLACE FUNCTION channels_stats_last_to_hist()
-                RETURNS TRIGGER AS $$
-                BEGIN
-                    INSERT INTO channels_stats_hist ("videoCount", "parsingDate", "channelId", "topicCategories", "viewCount", "subscribersCount", "hiddenSubscriberCount")
-                    VALUES (OLD."videoCount", OLD."parsingDate", OLD."channelId", OLD."topicCategories", OLD."viewCount", OLD."subscribersCount", OLD."hiddenSubscriberCount");
-                    RETURN NEW;
-                END;
-                $$ LANGUAGE 'plpgsql';
-                
-                CREATE TRIGGER channels_stats_last_to_hist_table
-                BEFORE UPDATE ON channels_stats_last
-                FOR EACH ROW
-                EXECUTE FUNCTION channels_stats_last_to_hist();""")
-    trigger_for_video_info = DDL("""CREATE OR REPLACE FUNCTION videos_stats_last_to_hist()
-                RETURNS TRIGGER AS $$
-                BEGIN
-                    INSERT INTO videos_stats_hist ("favoriteCount", "dislikesFromApi", "videoId", "parsingDate", "likesCount", "liveBroadcastContent", "viewsCount", "commentCount", "likesFromApi", "ratingFromApi")
-                    VALUES (OLD."favoriteCount", OLD."dislikesFromApi", OLD."videoId", OLD."parsingDate", OLD."likesCount", OLD."liveBroadcastContent", OLD."viewsCount", OLD."commentCount", OLD."likesFromApi", OLD."ratingFromApi");
-                    RETURN NEW;
-                END;
-                $$ LANGUAGE plpgsql;
-                
-                CREATE TRIGGER videos_stats_last_to_hist_table
-                BEFORE UPDATE ON videos_stats_last
-                FOR EACH ROW
-                EXECUTE FUNCTION videos_stats_last_to_hist();""")
-    connection.execute(trigger_for_channel_info)
-    connection.execute(trigger_for_video_info)
+#
+# with engine.connect() as connection:
+#     trigger_for_channel_info = DDL("""CREATE OR REPLACE FUNCTION channels_stats_last_to_hist()
+#                 RETURNS TRIGGER AS $$
+#                 BEGIN
+#                     INSERT INTO channels_stats_hist ("videoCount", "parsingDate", "channelId", "topicCategories", "viewCount", "subscribersCount", "hiddenSubscriberCount")
+#                     VALUES (OLD."videoCount", OLD."parsingDate", OLD."channelId", OLD."topicCategories", OLD."viewCount", OLD."subscribersCount", OLD."hiddenSubscriberCount");
+#                     RETURN NEW;
+#                 END;
+#                 $$ LANGUAGE 'plpgsql';
+#
+#                 CREATE TRIGGER channels_stats_last_to_hist_table
+#                 BEFORE UPDATE ON channels_stats_last
+#                 FOR EACH ROW
+#                 EXECUTE FUNCTION channels_stats_last_to_hist();""")
+#     trigger_for_video_info = DDL("""CREATE OR REPLACE FUNCTION videos_stats_last_to_hist()
+#                 RETURNS TRIGGER AS $$
+#                 BEGIN
+#                     INSERT INTO videos_stats_hist ("favoriteCount", "dislikesFromApi", "videoId", "parsingDate", "likesCount", "liveBroadcastContent", "viewsCount", "commentCount", "likesFromApi", "ratingFromApi")
+#                     VALUES (OLD."favoriteCount", OLD."dislikesFromApi", OLD."videoId", OLD."parsingDate", OLD."likesCount", OLD."liveBroadcastContent", OLD."viewsCount", OLD."commentCount", OLD."likesFromApi", OLD."ratingFromApi");
+#                     RETURN NEW;
+#                 END;
+#                 $$ LANGUAGE plpgsql;
+#
+#                 CREATE TRIGGER videos_stats_last_to_hist_table
+#                 BEFORE UPDATE ON videos_stats_last
+#                 FOR EACH ROW
+#                 EXECUTE FUNCTION videos_stats_last_to_hist();""")
+#     connection.execute(trigger_for_channel_info)
+#     connection.execute(trigger_for_video_info)

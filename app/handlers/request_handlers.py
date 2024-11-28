@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 import logging
 import requests
 from ..parsing_module import get_info
+from ..models_module import work_with_models
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -76,10 +77,14 @@ def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
     video_ids = get_latest_videos(channel_id, video_count)
 
     for video_id in video_ids:
+        work_with_models.create_video_context(video_id)
+
+    for video_id in video_ids:
         get_info.get_video_details(video_id)
         get_info.fetch_comments(video_id)
 
 
 def get_video_info(video_id):
+    work_with_models.create_video_context(video_id)
     get_info.get_video_details(video_id)
     get_info.fetch_comments(video_id)

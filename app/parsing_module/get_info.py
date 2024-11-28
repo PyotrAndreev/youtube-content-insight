@@ -34,11 +34,33 @@ def get_info_from_dislike_api(video_id: str):
         "Connection": "keep-alive"})
     if response.status_code == 200:
         video_api = response.json()
+        logger.info(f'Get info from dislike API for {video_id}')
         return video_api
-    elif response.status_code == 520:
+    elif response.status_code % 100 == 5:
         raise RetryableRequestError([url_api, params], response.status_code, response.text)
     else:
         raise Exception(response.status_code, response.text)
+
+
+def get_video_info_from_youtube(video_id: str):
+    url = f'{YOUTUBE_API_URL}videos'
+    params = {
+        'part': 'snippet,contentDetails,status,statistics,paidProductPlacementDetails',
+        'id': video_id,
+        'key': API_KEY
+    }
+    logger.info(f'Start getting video details for {video_id}')
+
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        video_info = response.json()['items'][0]
+        channel_id = video_info['snippet']['channelId']
+        logger.info(f'Get video details for {video_id}')
+        return (video_info, channel_id)
+    elif response.status_code % 100 == 5:
+        raise RetryableRequestError([url, params], response.status_code, response.text)
+    else:
+        raise Exception("Youtube API: Status code " + str(response.status_code))
 
 
 def with_retry(func, retry_cnt):
@@ -58,29 +80,17 @@ def with_retry(func, retry_cnt):
 
 
 def get_video_details(video_id: str):
-    url = f'{YOUTUBE_API_URL}videos'
-    params = {
-        'part': 'snippet,contentDetails,status,statistics,paidProductPlacementDetails',
-        'id': video_id,
-        'key': API_KEY
-    }
-    logger.info(f'Start getting video details for {video_id}')
+    video_info, channel_id = with_retry(lambda: get_video_info_from_youtube(video_id), 5)
+    if not work_with_models.check_exists_channel_by_id(channel_id):
+        get_channel_info(channel_id)
 
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        video_info = response.json()['items'][0]
-        channel_id = video_info['snippet']['channelId']
-        logger.info(f'Get video details for {video_id}')
-        if not work_with_models.check_exists_channel_by_id(channel_id):
-            get_channel_info(channel_id)
-
-        video_api = with_retry(lambda: get_info_from_dislike_api(video_id), 5)
-        work_with_models.save_video_info(video_info, video_api, channel_id, video_id)
-    else:
-        raise Exception("Youtube API: Status code " + str(response.status_code))
+    video_api = with_retry(lambda: get_info_from_dislike_api(video_id), 5)
+    work_with_models.save_video_info(video_info, video_api, channel_id, video_id)
+    work_with_models.finish_video_context(video_id)
 
 
 def get_channel_info(channel_id):
+    work_with_models.create_channel_context(channel_id)
     logger.info(f'Start getting channel details for {channel_id}')
     request = youtube.channels().list(
         part='snippet,contentDetails,statistics,topicDetails,status,brandingSettings,contentOwnerDetails,localizations',
@@ -93,6 +103,7 @@ def get_channel_info(channel_id):
     logger.info('Get channel details for {}'.format(channel_id))
     channel_info = response['items'][0]
     work_with_models.save_channel_info(channel_info, channel_id)
+    work_with_models.finish_channel_context(channel_id)
 
 
 def fetch_comments(video_id: str):
@@ -125,6 +136,7 @@ def fetch_comments(video_id: str):
             logging.info(' Parsing successfully {counter} comments for video_id - {video_id}'.format(
                 counter=counter, video_id=video_id))
             if 'nextPageToken' in response:
+                work_with_models.update_comments_context(video_id, response['nextPageToken'])
                 logging.info('Parsing next page token - ' + response['nextPageToken'] + 'for video ' + video_id)
                 response = youtube.commentThreads().list(
                     part='snippet',
@@ -135,8 +147,10 @@ def fetch_comments(video_id: str):
                 ).execute()
             else:
                 break
+        work_with_models.finish_comment_context(video_id)
     else:
         logging.info(f'Video {video_id} has no comments available.')
+        work_with_models.finish_comment_context(video_id)
 
 
 def get_transcript(video_id: str) -> list[dict]:
