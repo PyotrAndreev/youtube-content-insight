@@ -13,7 +13,7 @@ from app.models_module.work_with_models import get_channel_info_by_id
 from get_id import get_channel_id
 
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token="7301185478:AAFRjDa2gDBDwBfTHLvIZxx7CSY7CiwxqCU")
+bot = Bot(token=os.getenv("TG_BOT_API_KEY"))
 dp = Dispatcher()
 API_KEY = os.getenv("BOT_API_KEY")
 

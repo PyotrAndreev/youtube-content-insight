@@ -7,7 +7,7 @@ import requests
 import plotly.graph_objects as go
 from collections import Counter
 
-API_KEY = 'AIzaSyCxA3J87dODnkaVWeQ_bMmMp8q6wPMQb8s'
+API_KEY = os.getenv('API_KEY')
 CATEGORY_ID = '28'
 BASE_URL = 'https://www.googleapis.com/youtube/v3'
 
