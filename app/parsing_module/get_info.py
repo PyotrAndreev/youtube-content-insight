@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 import logging
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
@@ -72,6 +73,7 @@ def with_retry(func, retry_cnt):
             return res
         except RetryableRequestError as e:
             exception = e
+            time.sleep(1)
             continue
         except Exception as e:
             logger.error("Unexpected error \t" + str(e))
