@@ -1,0 +1,14 @@
+fastapi==0.115.4
+google-api-core==2.21.0
+google-api-python-client==2.149.0
+google-auth==2.35.0
+google-auth-httplib2==0.2.0
+googleapis-common-protos==1.65.0
+numpy==2.1.2
+pandas==2.2.3
+psycopg2==2.9.10
+python-dotenv==1.0.1
+requests==2.32.3
+SQLAlchemy==2.0.36
+uvicorn
+youtube-transcript-api==0.6.2
