@@ -12,3 +12,10 @@ requests==2.32.3
 SQLAlchemy==2.0.36
 uvicorn
 youtube-transcript-api==0.6.2
+aiogram<4.0
+pydantic-settings
+pip~=23.2.1
+attrs~=24.2.0
+typing_extensions~=4.12.2
+g4f~=0.3.5.8
+requests~=2.32.3
