@@ -17,14 +17,18 @@ bot = Bot(token=os.getenv("TG_BOT_API_KEY"))
 dp = Dispatcher()
 API_KEY = os.getenv("BOT_API_KEY")
 
+
 class Form(StatesGroup):
     waiting_for_topic = State()
+
 
 class GetChannelLink(StatesGroup):
     waiting_for_channel = State()
 
+
 class GetVideoLink(StatesGroup):
     waiting_for_video = State()
+
 
 class GetTopicId(StatesGroup):
     waiting_for_id = State()
@@ -37,12 +41,14 @@ def is_valid_youtube_link(url):
     else:
         return False
 
+
 def is_valid_video_link(url):
     pattern = r'^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(&.*)?$'
     if re.match(pattern, url):
         return True
     else:
         return False
+
 
 def get_latest_videos(api_key, id):
     print('meow')
@@ -64,6 +70,7 @@ def get_latest_videos(api_key, id):
     else:
         print(f"Error: {response.status_code} - {response.text}")
         return []
+
 
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
@@ -92,6 +99,7 @@ async def analyze_video(message: types.Message, state: FSMContext):
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали анализ канала. Пожалуйста, отправьте ссылку на канал.", reply_markup=keyboard)
     await state.set_state(GetChannelLink.waiting_for_channel)
+
 
 @dp.message(GetChannelLink.waiting_for_channel)
 async def process_topic(message: types.Message, state: FSMContext):
@@ -138,6 +146,7 @@ async def channel_statistics(message: types.Message, state: FSMContext):
     await message.answer("Вы выбрали анализ видео. Пожалуйста, отправьте ссылку на видео.", reply_markup=keyboard)
     await state.set_state(GetVideoLink.waiting_for_video)
 
+
 @dp.message(GetVideoLink.waiting_for_video)
 async def process_topic(message: types.Message, state: FSMContext):
     print("im here")
@@ -149,6 +158,7 @@ async def process_topic(message: types.Message, state: FSMContext):
         await message.answer("Введена неверная ссылка, повторите попытку")
         await state.set_state(GetVideoLink.waiting_for_video)
 
+
 @dp.message(lambda message: message.text == "Популярные теги")
 async def channel_statistics(message: types.Message):
     kb = [
@@ -158,6 +168,7 @@ async def channel_statistics(message: types.Message):
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны")
+
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
@@ -171,7 +182,6 @@ async def process_topic(message: types.Message, state: FSMContext):
     await state.set_state(None)
 
 
-
 @dp.message(lambda message: message.text == "Популярные видео")
 async def channel_statistics(message: types.Message, state: FSMContext):
     kb = [
@@ -182,6 +192,7 @@ async def channel_statistics(message: types.Message, state: FSMContext):
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали список популярных видео. Введите ID категории, видео по которой вам интересны", reply_markup=keyboard)
     await state.set_state(GetTopicId.waiting_for_id)
+
 
 @dp.message(lambda message: message.text == "Сценарий для видео")
 async def channel_statistics(message: types.Message, state: FSMContext):
