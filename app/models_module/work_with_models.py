@@ -1,7 +1,8 @@
 import logging
 
-from sqlalchemy import exists
-from .db_architecture import VideoStatsLast, ChannelStatsLast, Context
+import pandas as pd
+from sqlalchemy import exists, and_
+from .db_architecture import VideoStatsLast, ChannelStatsLast, Context, Video
 from ..models_module import db_architecture
 from ..models_module import db_sessions
 from datetime import datetime, timezone
@@ -160,7 +161,7 @@ def create_channel_context(channel_id: str):
 
 def finish_channel_context(channel_id: str):
     q = db_sessions.session.query(Context)
-    q = q.filter(Context.channelId == channel_id)
+    q = q.filter(and_(Context.channelId == channel_id, Context.status != Status.finish))
     record = q.one()
     record.status = Status.finish
     record.date = datetime.now(timezone.utc).replace(microsecond=0)
@@ -181,7 +182,7 @@ def create_video_context(video_id: str):
 
 def finish_video_context(video_id: str):
     q = db_sessions.session.query(Context)
-    q = q.filter(Context.videoId == video_id)
+    q = q.filter(and_(Context.videoId == video_id, Context.status != Status.finish))
     record = q.one()
     record.status = Status.parsing_comments
     record.date = datetime.now(timezone.utc).replace(microsecond=0)
@@ -191,7 +192,7 @@ def finish_video_context(video_id: str):
 
 def update_comments_context(video_id: str, comment_page_id: str):
     q = db_sessions.session.query(Context)
-    q = q.filter(Context.videoId == video_id)
+    q = q.filter(and_(Context.videoId == video_id, Context.status != Status.finish))
     record = q.one()
     record.commentPageId = comment_page_id
     record.date = datetime.now(timezone.utc).replace(microsecond=0)
@@ -201,7 +202,7 @@ def update_comments_context(video_id: str, comment_page_id: str):
 
 def finish_comment_context(video_id: str):
     q = db_sessions.session.query(Context)
-    q = q.filter(Context.videoId == video_id)
+    q = q.filter(and_(Context.videoId == video_id, Context.status != Status.finish))
     record = q.one()
     record.status = Status.finish
     record.date = datetime.now(timezone.utc).replace(microsecond=0)
@@ -237,9 +238,22 @@ def check_exists_comment_by_id(comment_id: str):
 
 
 def check_is_comments_available(video_id: str):
-    video_el = db_sessions.session.query(db_architecture.VideoStatsLast).filter(db_architecture.VideoStatsLast.videoId == video_id).first()
+    video_el = db_sessions.session.query(db_architecture.VideoStatsLast).filter(db_architecture.VideoStatsLast.videoId
+                                                                                == video_id).first()
     if not video_el.commentCount:
         return False
     if video_el.commentCount > 0:
         return True
     return False
+
+
+def get_comments_df(video_id: str):
+    df = pd.read_sql(f"""SELECT * FROM comments WHERE comments."videoId" = '{video_id}'""", con=db_sessions.engine)
+    return df
+
+
+def video_published_time(video_id: str):
+    q = db_sessions.session.query(Video)
+    q = q.filter(Video.videoId == video_id)
+    record = q.one()
+    return record.publishedAt.strftime("%Y-%m-%d")

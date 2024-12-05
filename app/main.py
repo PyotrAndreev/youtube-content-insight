@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from .handlers.request_handlers import get_info_from_last_videos_in_channel
 from .handlers.request_handlers import get_video_info
+from .analytics.comments_analytics import comments_emotional_analytics
 
 app = FastAPI()
 
@@ -16,3 +17,9 @@ async def root(youtube_channel_url: str, video_count: int = 0):
 @app.get("/video_id/", status_code=200)
 async def root(video_id: str):
     get_video_info(video_id)
+
+
+@app.get("/video_analytics/", status_code=200)
+async def root(video_id: str):
+    comments_emotional_analytics(video_id)
+
