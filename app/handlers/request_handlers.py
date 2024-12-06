@@ -17,6 +17,21 @@ youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 
 def get_latest_videos(channel_id, max_results):
+    """
+    Retrieve the most recent videos from a YouTube channel.
+
+    Args:
+        channel_id (str): The unique ID of the YouTube channel.
+        max_results (int): The maximum number of video IDs to fetch.
+
+    Behavior:
+        - Fetches video IDs of the latest uploads from the specified channel, using the YouTube Data API.
+        - Handles pagination to ensure up to `max_results` videos are retrieved if available.
+        - Logs the process of fetching videos and the total number retrieved.
+
+    Returns:
+        list[str]: A list of video IDs corresponding to the latest uploads.
+    """
     logging.info(f'Start getting last videos from {channel_id}')
     request = youtube.search().list(part='id', channelId=channel_id, order='date', maxResults=max_results)
     response = request.execute()
@@ -36,6 +51,20 @@ def get_latest_videos(channel_id, max_results):
 
 
 def get_channel_handle_by_url(channel_url: str) -> str | None:
+    """
+    Extract the YouTube channel handle from a given channel URL.
+
+    Args:
+        channel_url (str): The URL of the YouTube channel.
+
+    Behavior:
+        - Matches the provided URL against a set of regular expression patterns to extract the channel handle.
+        - Logs the successful extraction of the channel handle.
+        - Raises a `ValueError` if the handle cannot be extracted.
+
+    Returns:
+        str: The extracted channel handle if successful.
+    """
     patterns = [
         r'(?:https?://)?(?:www\.)?youtube\.com/@([a-zA-Z0-9_-]+)',
     ]
@@ -49,6 +78,20 @@ def get_channel_handle_by_url(channel_url: str) -> str | None:
 
 
 def get_channel_id(channel_handle: str):
+    """
+    Retrieve the channel ID for a given channel handle using the YouTube Data API.
+
+    Args:
+        channel_handle (str): The handle of the YouTube channel, prefixed with "@".
+
+    Behavior:
+        - Sends a request to the YouTube Data API to fetch the channel ID.
+        - Logs the fetched channel ID if the request is successful.
+        - Raises a `ValueError` if the channel ID cannot be retrieved or the API request fails.
+
+    Returns:
+        str: The unique ID of the channel.
+    """
     api_url = 'https://www.googleapis.com/youtube/v3/channels'
     params = {'part': 'contentDetails',
               'forHandle': '@' + channel_handle,
@@ -70,6 +113,23 @@ def get_channel_id(channel_handle: str):
 
 
 def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
+    """
+    Fetch information from the latest videos of a specified YouTube channel.
+
+    Args:
+        channel_url (str): The URL of the YouTube channel.
+        video_count (int): The number of latest videos to process.
+
+    Behavior:
+        - Extracts the channel handle from the URL and retrieves the channel ID.
+        - Collects metadata and statistics about the specified number of recent videos.
+        - For each video:
+            - Creates a video parsing context.
+            - Fetches video details and associated comments.
+
+    Returns:
+        None
+    """
     channel_handle = get_channel_handle_by_url(channel_url)
     channel_id = get_channel_id(channel_handle)
     get_info.get_channel_info(channel_id)
@@ -85,6 +145,20 @@ def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
 
 
 def get_video_info(video_id):
+    """
+    Retrieve information and comments for a specific video.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Creates a parsing context for the video.
+        - Fetches video metadata and statistics using the YouTube Data API.
+        - Fetches and processes comments associated with the video.
+
+    Returns:
+        None
+    """
     work_with_models.create_video_context(video_id)
     get_info.get_video_details(video_id)
     get_info.fetch_comments(video_id)

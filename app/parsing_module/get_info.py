@@ -25,6 +25,22 @@ class RetryableRequestError(Exception):
 
 
 def get_info_from_dislike_api(video_id: str):
+    """
+    Retrieve dislike information for a YouTube video using the Return YouTube Dislike API.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Sends a GET request to the API with the provided video ID.
+        - Parses the JSON response if the request is successful.
+        - Logs the process of fetching dislike information.
+        - Handles retryable errors (status codes 5xx) by raising a `RetryableRequestError`.
+        - Raises an exception for non-retryable errors.
+
+    Returns:
+        dict: The JSON response containing dislike data for the video.
+    """
     url_api = 'https://returnyoutubedislikeapi.com/votes'
     params = {
         'videoId': video_id,
@@ -44,6 +60,24 @@ def get_info_from_dislike_api(video_id: str):
 
 
 def get_video_info_from_youtube(video_id: str):
+    """
+    Fetch detailed information for a YouTube video using the YouTube Data API.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Sends a GET request to the YouTube Data API with the video ID.
+        - Logs the process of fetching video details.
+        - Handles retryable errors (status codes 5xx) by raising a `RetryableRequestError`.
+        - Raises an exception for other errors.
+        - Extracts the video information and associated channel ID from the response.
+
+    Returns:
+        tuple: A tuple containing:
+            - video_info (dict): The metadata and statistics of the video.
+            - channel_id (str): The ID of the channel that uploaded the video.
+    """
     url = f'{YOUTUBE_API_URL}videos'
     params = {
         'part': 'snippet,contentDetails,status,statistics,paidProductPlacementDetails',
@@ -65,6 +99,25 @@ def get_video_info_from_youtube(video_id: str):
 
 
 def with_retry(func, retry_cnt):
+    """
+    Execute a function with retry logic for handling transient errors.
+
+    Args:
+        func (callable): The function to execute.
+        retry_cnt (int): The maximum number of retries for retryable errors.
+
+    Behavior:
+        - Executes the provided function.
+        - Retries the function call if a `RetryableRequestError` is raised.
+        - Logs any unexpected errors and raises them immediately.
+        - Waits for 1 second between retries.
+
+    Returns:
+        Any: The result of the successfully executed function.
+
+    Raises:
+        Exception: If all retry attempts fail.
+    """
     exception = None
     retry_cnt = max(retry_cnt, 0)
     for i in range(retry_cnt + 1):
@@ -82,6 +135,21 @@ def with_retry(func, retry_cnt):
 
 
 def get_video_details(video_id: str):
+    """
+    Fetch and store detailed information for a YouTube video.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Retrieves video metadata and statistics using `get_video_info_from_youtube` with retries.
+        - Checks if the video's channel exists in the database, and fetches its information if not.
+        - Fetches dislike data using `get_info_from_dislike_api` with retries.
+        - Saves the video's metadata, dislike data, and context to the database.
+
+    Returns:
+        None
+    """
     video_info, channel_id = with_retry(lambda: get_video_info_from_youtube(video_id), 5)
     if not work_with_models.check_exists_channel_by_id(channel_id):
         get_channel_info(channel_id)
@@ -92,6 +160,20 @@ def get_video_details(video_id: str):
 
 
 def get_channel_info(channel_id):
+    """
+    Fetch and store detailed information for a YouTube channel.
+
+    Args:
+        channel_id (str): The unique ID of the YouTube channel.
+
+    Behavior:
+        - Sends a request to the YouTube Data API to fetch detailed channel information.
+        - Logs the process of fetching channel details.
+        - Saves the channel's metadata and context to the database.
+
+    Returns:
+        None
+    """
     work_with_models.create_channel_context(channel_id)
     logger.info(f'Start getting channel details for {channel_id}')
     request = youtube.channels().list(
@@ -109,6 +191,22 @@ def get_channel_info(channel_id):
 
 
 def fetch_comments(video_id: str):
+    """
+    Retrieve and store comments for a YouTube video.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Checks if comments are available for the video.
+        - Fetches top-level comments and their replies using the YouTube Data API.
+        - Handles pagination to retrieve all available comments.
+        - Logs the process of fetching and saving comments.
+        - Updates the comments context in the database.
+
+    Returns:
+        None
+    """
     counter = 0
     if work_with_models.check_is_comments_available(video_id):
         response = youtube.commentThreads().list(
@@ -156,5 +254,21 @@ def fetch_comments(video_id: str):
 
 
 def get_transcript(video_id: str) -> list[dict]:
+    """
+    Retrieve the transcript for a YouTube video.
+
+    Args:
+        video_id (str): The unique ID of the YouTube video.
+
+    Behavior:
+        - Uses the YouTubeTranscriptApi library to fetch the video's transcript.
+        - Returns the transcript as a list of dictionaries.
+
+    Returns:
+        list[dict]: A list of dictionaries, where each dictionary contains:
+            - `text`: The transcript text.
+            - `start`: The start time of the segment.
+            - `duration`: The duration of the segment.
+    """
     transcript = YouTubeTranscriptApi.get_transcript(video_id)
     return transcript
