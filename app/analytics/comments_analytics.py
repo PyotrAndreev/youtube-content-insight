@@ -267,7 +267,7 @@ def comments_emotional_analytics(video_id: str):
 
     finish_date = date_object + timedelta(days=7)
     finish_time = finish_date.strftime("%Y-%m-%d")
-    df = pd.read_sql(f"""SELECT * FROM comments WHERE comments."videoId" = '{video_id}'""", con=db_sessions.engine)
+    df = work_with_models.get_comments_df(video_id)
 
     tokenizer = BertTokenizerFast.from_pretrained('blanchefort/rubert-base-cased-sentiment-rusentiment')
     model = AutoModelForSequenceClassification.from_pretrained(
