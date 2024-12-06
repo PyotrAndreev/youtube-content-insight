@@ -4,6 +4,7 @@ import time
 import logging
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
+from googleapiclient.errors import HttpError
 from youtube_transcript_api import YouTubeTranscriptApi
 from ..models_module import work_with_models
 
@@ -53,7 +54,7 @@ def get_info_from_dislike_api(video_id: str):
         video_api = response.json()
         logger.info(f'Get info from dislike API for {video_id}')
         return video_api
-    elif response.status_code % 100 == 5:
+    elif response.status_code // 100 == 5:
         raise RetryableRequestError([url_api, params], response.status_code, response.text)
     else:
         raise Exception(response.status_code, response.text)
@@ -92,7 +93,7 @@ def get_video_info_from_youtube(video_id: str):
         channel_id = video_info['snippet']['channelId']
         logger.info(f'Get video details for {video_id}')
         return (video_info, channel_id)
-    elif response.status_code % 100 == 5:
+    elif response.status_code // 100 == 5:
         raise RetryableRequestError([url, params], response.status_code, response.text)
     else:
         raise Exception("Youtube API: Status code " + str(response.status_code))
@@ -218,9 +219,16 @@ def fetch_comments(video_id: str):
         try:
             response = response.execute()
             logging.info('Get first comments for video {}'.format(video_id))
-        except Exception as e:
-            # video has no comments
-            return
+        except HttpError as e:
+            if e.resp.status == 403:
+                logger.error("Quota exceeded. Please wait until the quota resets.")
+                logger.error(e)
+            elif e.resp.status // 100 == 5:
+                logger.error(f"Server error getting comments for video {video_id}")
+                logger.error(e)
+            else:
+                logging.error(f"An unexpected error occurred: {e}")
+                raise
         while response:
             for item in response['items']:
                 comment_id = item['snippet']['topLevelComment']['id']
@@ -244,7 +252,20 @@ def fetch_comments(video_id: str):
                     textFormat='plainText',
                     maxResults=100,
                     pageToken=response['nextPageToken']
-                ).execute()
+                )
+                try:
+                    response = response.execute()
+                    logging.info('Get first comments for video {}'.format(video_id))
+                except HttpError as e:
+                    if e.resp.status == 403:
+                        logger.error("Quota exceeded. Please wait until the quota resets.")
+                        logger.error(e)
+                    elif e.resp.status // 100 == 5:
+                        logger.error(f"Server error getting comments for video {video_id}")
+                        logger.error(e)
+                    else:
+                        logging.error(f"An unexpected error occurred: {e}")
+                        raise
             else:
                 break
         work_with_models.finish_comment_context(video_id)
