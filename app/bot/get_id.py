@@ -1,8 +1,11 @@
+import os
+
 import requests
 import re
 
+api_key = os.getenv("API_KEY")
+
 def get_channel_id(channel_url):
-  api_key = 'AIzaSyCxA3J87dODnkaVWeQ_bMmMp8q6wPMQb8s'
   match = re.search(r'https?://youtube.com/@([a-zA-Z0-9_-]+)', channel_url)
   if not match:
     print("Некорректный формат URL.")

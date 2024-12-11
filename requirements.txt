@@ -1,5 +1,4 @@
 google_api_python_client==2.149.0
-pandas==1.4.4
 python-dotenv==1.0.1
 Requests==2.32.3
 SQLAlchemy==1.4.39
@@ -68,3 +67,7 @@ attrs~=24.2.0
 typing_extensions~=4.12.2
 g4f~=0.3.5.8
 requests~=2.32.3
+dash-core-components~=2.0.0
+dash~=2.18.2
+dash-html-components~=2.0.0
+plotly~=5.24.1
