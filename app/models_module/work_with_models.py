@@ -251,7 +251,7 @@ def create_video_context(video_id: str):
     Create a parsing context for a video.
 
     Args:
-        video_id (str): The unique ID of the video.
+        videoId (str): The unique ID of the video.
 
     Behavior:
         - Creates a new record in the `Context` table with `status` set to `parsing_video`.
@@ -424,6 +424,22 @@ def get_comments_df(video_id: str):
         pd.DataFrame: A DataFrame containing comments for the specified video.
     """
     df = pd.read_sql(f"""SELECT * FROM comments WHERE comments."videoId" = '{video_id}'""", con=db_sessions.engine)
+    print(df.head)
+    return df
+
+
+def get_comments_df_videos(video_ids: [str]):
+    """
+    Fetch comments for a given video as a pandas DataFrame.
+
+    Args:
+        video_idd (str): The unique IDd of the video.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing comments for the specified video.
+    """
+    video_ids_line = ', '.join(f"'{video_id}'" for video_id in video_ids)
+    df = pd.read_sql(f"""SELECT * FROM comments WHERE comments."videoId" in ({video_ids_line})""", con=db_sessions.engine)
     return df
 
 

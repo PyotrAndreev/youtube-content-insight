@@ -42,7 +42,6 @@ from sentence_transformers import SentenceTransformer
 from scipy.stats import shapiro, levene, ttest_ind
 from datetime import datetime, timedelta
 
-
 def process_sentiment_analysis(texts, tokenizer, model, batch_size=16, device='cpu') -> np.array:
     """
     Perform sentiment analysis on a list of text inputs using a given model.
@@ -62,7 +61,8 @@ def process_sentiment_analysis(texts, tokenizer, model, batch_size=16, device='c
             try:
                 inputs = tokenizer(batch, max_length=512, padding=True, truncation=True, return_tensors='pt').to(device)
             except:
-                print(batch)
+                logging.info(f"batch inference failed on {i} batch.")
+                logging.info(f"{batch}")
                 break
             outputs = model(**inputs)
             predicted = torch.nn.functional.softmax(outputs.logits, dim=1)
@@ -74,7 +74,7 @@ def process_sentiment_analysis(texts, tokenizer, model, batch_size=16, device='c
     return sentiments
 
 
-def sentiment_analytics(sentiments, timestamp=''):
+def sentiment_analytics(sentiments, video_id, timestamp=''):
     """
     Calculate sentiment statistics for a given array of sentiment predictions.
 
@@ -102,11 +102,57 @@ def sentiment_analytics(sentiments, timestamp=''):
     answer['neutral_perc'] = (100 * cnt_neutral / cnt_comments)
     answer['proportion_metric'] = np.mean(sentiments)
     answer['timestamp'] = timestamp
+    answer['video_id'] = video_id
 
     return answer
 
+def plot_dynamics_video_to_video(values, title="Динамика значений",
+                  xlabel="Видео", ylabel="Значение"):
+    """
+    Plot the dynamics of positive, negative, and neutral percentages across videos.
 
-def plot_dynamics(values, title="Динамика значений",
+    :param values: list of dict
+        A list of dictionaries containing statistics for each video.
+        Each dictionary should have keys: 'video_id', 'positive_perc', 'negative_perc', and 'neutral_perc'.
+    :param title: str, optional
+        Title of the plot (default is "Динамика значений").
+    :param xlabel: str, optional
+        Label for the x-axis (default is "Видео").
+    :param ylabel: str, optional
+        Label for the y-axis (default is "Значение").
+    :raises ValueError:
+        If either the positive or negative value lists are empty.
+    :return: None
+    """
+
+    videos = [stat['video_id'] for stat in values]
+    values1 = [stat['positive_perc'] for stat in values]
+    values2 = [stat['negative_perc'] for stat in values]
+    values3 = [stat['neutral_perc'] for stat in values]
+    label1 = 'Процент позитивных комментариев'
+    label2 = 'Процент негативных комментариев'
+    label3 = 'Процент нейтральных комментариев'
+
+    if not values1 or not values2:
+        logging.info(f"Plotting dynamics requires non-empty values.")
+        raise ValueError("Оба списка значений не должны быть пустыми.")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(videos, values1, marker='o', linestyle='-', color='b', label=label1)
+    plt.plot(videos, values2, marker='s', linestyle='--', color='r', label=label2)
+
+    plt.gca().xaxis.set_major_locator(mdates.AutoDateLocator())
+    plt.gcf().autofmt_xdate(rotation=60, ha='right')
+
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend()
+    plt.show()
+
+
+def plot_dynamics_in_video(values, title="Динамика значений",
                   xlabel="Дата и время", ylabel="Значение"):
     """
     Plot sentiment dynamics over time.
@@ -128,6 +174,7 @@ def plot_dynamics(values, title="Динамика значений",
     label3 = 'Процент нейтральных комментариев'
 
     if not values1 or not values2:
+        logging.info(f"Plotting dynamics requires non-empty values.")
         raise ValueError("Оба списка значений не должны быть пустыми.")
 
     plt.figure(figsize=(10, 6))
@@ -207,6 +254,19 @@ def are_emotions_same(s1: np.array, s2: np.array) -> bool:
     return False
 
 
+def get_emotional_dynamics_video_to_video(videos, df, tokenizer, model, device):
+    answer = []
+
+    for video_id in videos:
+        sample = df[df['videoId'] == video_id]
+        result = process_sentiment_analysis(sample['textDisplay'].fillna('').values.tolist(), tokenizer, model,
+                                            device=device)
+        analytics = sentiment_analytics(result, video_id)
+        answer.append(analytics)
+
+    return answer
+
+
 def get_emotional_dynamics_in_video(video_id, df, start, end, tokenizer, model, device, detailing='h'):
     """
     Analyze the emotional dynamics of comments for a specific video within a time range.
@@ -261,7 +321,7 @@ def get_emotional_dynamics_in_video(video_id, df, start, end, tokenizer, model, 
     return answer
 
 
-def comments_emotional_analytics(video_id: str):
+def comments_emotional_analytics_in_video(video_id: str):
     start_time = work_with_models.video_published_time(video_id)
     date_object = datetime.strptime(start_time, "%Y-%m-%d")
 
@@ -273,7 +333,6 @@ def comments_emotional_analytics(video_id: str):
     model = AutoModelForSequenceClassification.from_pretrained(
         'blanchefort/rubert-base-cased-sentiment-rusentiment', return_dict=True)
     df['publishedAt'] = pd.to_datetime(df['publishedAt']).dt.tz_localize('UTC')
-    print(df.head(3))
 
     texts = df['textDisplay'].fillna('').values.tolist()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -283,29 +342,19 @@ def comments_emotional_analytics(video_id: str):
                                           pd.Timestamp(finish_time, tz='UTC'), tokenizer, model,
                                           device, 'h')
     print(dyn)
-    # plot_dynamics(dyn)
+    plot_dynamics_in_video(dyn)
 
 
-# BERTopic
-#
-# stop_words = np.loadtxt('stopwords-ru.txt', dtype=str, usecols=0)
-# comments = df['textDisplay'].fillna('').values.tolist()
-# sentence_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-#
-# topic_model = BERTopic(
-#     embedding_model=sentence_model,
-#     vectorizer_model=CountVectorizer(ngram_range=(1, 2), stop_words=list(stop_words)),
-#     nr_topics=15,
-#     verbose=True
-# )
-#
-# # Кластеризация текстов
-# topics, probs = topic_model.fit_transform(comments)
-#
-# # Результаты кластеризации
-# # print("Темы для каждого комментария:")
-# # for comment, topic in zip(comments, topics):
-# #     print(f"Комментарий: {comment}\nТема: {topic}\n")
-#
-# # Визуализация тем
-# # topic_model.visualize_topics()
+def comments_emotional_analytics_video_to_video(video_ids: [str]):
+    df = work_with_models.get_comments_df_videos(video_ids)
+
+    tokenizer = BertTokenizerFast.from_pretrained('blanchefort/rubert-base-cased-sentiment-rusentiment')
+    model = AutoModelForSequenceClassification.from_pretrained(
+        'blanchefort/rubert-base-cased-sentiment-rusentiment', return_dict=True)
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # sentiments = process_sentiment_analysis(texts, model, batch_size=16, device=device)
+    dyn = get_emotional_dynamics_video_to_video(video_ids, df, tokenizer, model, device)
+    print(dyn)
+    plot_dynamics_video_to_video(dyn)

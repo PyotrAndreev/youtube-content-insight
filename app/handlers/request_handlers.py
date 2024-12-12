@@ -162,3 +162,8 @@ def get_video_info(video_id):
     work_with_models.create_video_context(video_id)
     get_info.get_video_details(video_id)
     get_info.fetch_comments(video_id)
+
+
+def get_videos_info(video_ids):
+    for video_id in video_ids:
+        get_video_info(video_id)
