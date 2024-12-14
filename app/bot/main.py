@@ -10,12 +10,11 @@ import requests
 import re
 import os
 # from app.models_module.work_with_models import get_channel_info_by_id
-from get_id import get_channel_id
+from get_id import get_video_id
 from vizualization.dash_vizualize import get_tags_list
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=os.getenv("TG_BOT_API_KEY"))
-# bot=Bot(token="7301185478:AAFRjDa2gDBDwBfTHLvIZxx7CSY7CiwxqCU")
 dp = Dispatcher()
 API_KEY = os.getenv("API_KEY")
 
@@ -33,6 +32,9 @@ class GetTopicId(StatesGroup):
 
 class GetCategoryId(StatesGroup):
     waiting = State()
+
+class GetVideosList(StatesGroup):
+    waiting_for_videos_list = State()
 
 
 def is_valid_youtube_link(url):
@@ -75,6 +77,7 @@ async def send_welcome(message: types.Message):
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
             types.KeyboardButton(text="Популярные теги"),
             types.KeyboardButton(text="Популярные видео"),
             types.KeyboardButton(text="Сценарий для видео")
@@ -121,6 +124,7 @@ async def back(message: types.Message):
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
             types.KeyboardButton(text="Популярные теги"),
             types.KeyboardButton(text="Популярные видео"),
             types.KeyboardButton(text="Сценарий для видео")
@@ -151,6 +155,31 @@ async def process_topic(message: types.Message, state: FSMContext):
     else:
         await message.answer("Введена неверная ссылка, повторите попытку")
         await state.set_state(GetVideoLink.waiting_for_video)
+
+@dp.message(lambda message: message.text == "Динамика видео")
+async def channel_statistics(message: types.Message, state: FSMContext):
+    kb = [
+        [
+            types.KeyboardButton(text="Назад"),
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await message.answer("Вы выбрали обзор динамики видео. Пожалуйста, отправьте ссылку на список видео, которые хотите отследить.", reply_markup=keyboard)
+    await state.set_state(GetVideosList.waiting_for_videos_list)
+
+@dp.message(GetVideosList.waiting_for_videos_list)
+async def process_topic(message: types.Message, state: FSMContext):
+    print("im here")
+    videos = message.text.split()
+    res = []
+    for link in videos:
+        if is_valid_video_link(link):
+            await message.answer("Ссылка получена")
+            res.append(get_video_id(link))
+            await state.set_state(None)
+        else:
+            await message.answer("Введена неверная ссылка, повторите попытку")
+            await state.set_state(GetVideoLink.waiting_for_video)
 
 @dp.message(lambda message: message.text == "Популярные теги")
 async def channel_statistics(message: types.Message, state: FSMContext):

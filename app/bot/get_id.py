@@ -25,3 +25,10 @@ def get_channel_id(channel_url):
   else:
     print(f"Ошибка запроса: {response.status_code}")
     return 2
+
+def get_video_id(url):
+    video_id = None
+    match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
+    if match:
+      video_id = match.group(1)
+    return video_id
