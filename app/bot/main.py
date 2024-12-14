@@ -172,13 +172,15 @@ async def process_topic(message: types.Message, state: FSMContext):
     print("im here")
     videos = message.text.split()
     res = []
+    cnt = 0
     for link in videos:
+        cnt += 1
         if is_valid_video_link(link):
             await message.answer("Ссылка получена")
             res.append(get_video_id(link))
             await state.set_state(None)
         else:
-            await message.answer("Введена неверная ссылка, повторите попытку")
+            await message.answer("Введена неверная ссылка под номером" + str(cnt) + ", повторите попытку")
             await state.set_state(GetVideoLink.waiting_for_video)
 
 @dp.message(lambda message: message.text == "Популярные теги")
