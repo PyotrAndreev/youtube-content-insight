@@ -1,5 +1,6 @@
 from g4f.client import Client
 
+
 def generate_scenario(topic):
     print("running...")
     print(topic)

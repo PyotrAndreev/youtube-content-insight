@@ -12,7 +12,6 @@ from ..models_module import work_with_models
 
 from matplotlib import pyplot as plt
 import matplotlib.dates as mdates
-
 from scipy.stats import shapiro, levene, ttest_ind
 from datetime import datetime, timedelta
 
@@ -127,8 +126,7 @@ def plot_dynamics_video_to_video(values, title="Динамика значени�
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
 
-    plt.savefig("video_to_video.png", format='png', dpi=300)
-    plt.show()
+    plt.savefig("app/content/video_to_video.png", format='png', dpi=300)
 
     logging.info(f".png file has been saved.")
 
@@ -175,8 +173,7 @@ def plot_dynamics_in_video(values, title="Динамика значений",
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
 
-    plt.savefig("in_video.png", format='png', dpi=300)
-    plt.show()
+    plt.savefig("app/content/in_video.png", format='png', dpi=300)
 
     logging.info(f".png file has been saved.")
 
@@ -340,7 +337,7 @@ def comments_emotional_analytics_in_video(video_id: str):
     dyn = get_emotional_dynamics_in_video(video_id, df, pd.Timestamp(start_time, tz='UTC'),
                                           pd.Timestamp(finish_time, tz='UTC'), tokenizer, model,
                                           device, 'h')
-    print(dyn)
+    logging.info("Collect dyn results")
     plot_dynamics_in_video(dyn)
 
 
@@ -355,5 +352,5 @@ def comments_emotional_analytics_video_to_video(video_ids: [str]):
 
     # sentiments = process_sentiment_analysis(texts, model, batch_size=16, device=device)
     dyn = get_emotional_dynamics_video_to_video(video_ids, df, tokenizer, model, device)
-    print(dyn)
+    logging.info("Collect dyn results")
     plot_dynamics_video_to_video(dyn)

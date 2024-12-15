@@ -6,12 +6,13 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from dotenv import load_dotenv
 
-from create_scenario import generate_scenario
+from app.bot.create_scenario import generate_scenario
 import requests
 import re
 import os
-from get_id import get_video_id
 from vizualization.dash_vizualize import get_tags_list
+from app.handlers.request_handlers import get_video_analytics
+from app.handlers.request_handlers import get_videos_analytics
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -163,7 +164,22 @@ async def process_topic(message: types.Message, state: FSMContext):
     link = message.text
     if is_valid_video_link(link):
         await message.answer("Ссылка получена")
-        await state.set_state(None)
+        await message.answer("Скоро вы увидите график эмоциональной окраски комментариев для этого видео")
+        get_video_analytics(link)
+        kb = [
+            [
+                types.KeyboardButton(text="Аналитика видео"),
+                types.KeyboardButton(text="Динамика видео"),
+                types.KeyboardButton(text="Популярные теги"),
+                types.KeyboardButton(text="Популярные видео"),
+                types.KeyboardButton(text="Сценарий для видео")
+            ],
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        photo_path = "app/content/in_video.png"
+        await message.answer_photo(
+            types.FSInputFile(path=photo_path), caption=f"Аналитика комментариев для видео{link}", reply_markup=keyboard
+        )
     else:
         await message.answer("Введена неверная ссылка, повторите попытку")
         await state.set_state(GetVideoLink.waiting_for_video)
@@ -177,8 +193,8 @@ async def channel_statistics(message: types.Message, state: FSMContext):
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer("Вы выбрали обзор динамики видео. Пожалуйста, отправьте ссылку на список видео, которые "
-                         "хотите отследить.", reply_markup=keyboard)
+    await message.answer("Вы выбрали обзор динамики видео. Пожалуйста, отправьте список из ссылок на видео через "
+                         "пробел, которые хотите отследить.", reply_markup=keyboard)
     await state.set_state(GetVideosList.waiting_for_videos_list)
 
 
@@ -189,13 +205,29 @@ async def process_topic(message: types.Message, state: FSMContext):
     cnt = 0
     for link in videos:
         cnt += 1
-        if is_valid_video_link(link):
-            await message.answer("Ссылка получена")
-            res.append(get_video_id(link))
-            await state.set_state(None)
-        else:
+        if not is_valid_video_link(link):
             await message.answer("Введена неверная ссылка под номером" + str(cnt) + ", повторите попытку")
             await state.set_state(GetVideoLink.waiting_for_video)
+            return
+        else:
+            res.append(link)
+    await message.answer("Ссылки на видео получены")
+    await message.answer("Скоро вы увидите график эмоциональной окраски комментариев для этих видео")
+    get_videos_analytics(res)
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    photo_path = "app/content/video_to_video.png"
+    await message.answer_photo(
+        types.FSInputFile(path=photo_path), reply_markup=keyboard
+    )
 
 
 @dp.message(lambda message: message.text == "Популярные теги")

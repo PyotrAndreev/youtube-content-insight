@@ -7,6 +7,9 @@ import logging
 import requests
 from ..parsing_module import get_info
 from ..models_module import work_with_models
+from ..analytics.comments_analytics import comments_emotional_analytics_in_video
+from ..analytics.comments_analytics import comments_emotional_analytics_video_to_video
+from ..analytics.comments_clustering import clustering
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -112,6 +115,14 @@ def get_channel_id(channel_handle: str):
         raise ValueError(f'Request to get channel id failed with status code: {response.status_code}')
 
 
+def get_video_id(url):
+    video_id = None
+    match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
+    if match:
+        video_id = match.group(1)
+    return video_id
+
+
 def get_info_from_last_videos_in_channel(channel_url: str, video_count: int):
     """
     Fetch information from the latest videos of a specified YouTube channel.
@@ -164,6 +175,16 @@ def get_video_info(video_id):
     get_info.fetch_comments(video_id)
 
 
-def get_videos_info(video_ids):
-    for video_id in video_ids:
+def get_video_analytics(video_url: str):
+    video_id = get_video_id(video_url)
+    get_video_info(video_id)
+    comments_emotional_analytics_in_video(video_id)
+
+
+def get_videos_analytics(video_urls: [str]):
+    video_ids = []
+    for video_url in video_urls:
+        video_id = get_video_id(video_url)
+        video_ids.append(video_id)
         get_video_info(video_id)
+    comments_emotional_analytics_video_to_video(video_ids)
