@@ -9,29 +9,32 @@ from create_scenario import generate_scenario
 import requests
 import re
 import os
-from app.models_module.work_with_models import get_channel_info_by_id
-from get_id import get_channel_id
+# from app.models_module.work_with_models import get_channel_info_by_id
+from get_id import get_video_id
+from vizualization.dash_vizualize import get_tags_list
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=os.getenv("TG_BOT_API_KEY"))
 dp = Dispatcher()
-API_KEY = os.getenv("BOT_API_KEY")
-
+API_KEY = os.getenv("API_KEY")
 
 class Form(StatesGroup):
     waiting_for_topic = State()
 
-
 class GetChannelLink(StatesGroup):
     waiting_for_channel = State()
-
 
 class GetVideoLink(StatesGroup):
     waiting_for_video = State()
 
-
 class GetTopicId(StatesGroup):
     waiting_for_id = State()
+
+class GetCategoryId(StatesGroup):
+    waiting = State()
+
+class GetVideosList(StatesGroup):
+    waiting_for_videos_list = State()
 
 
 def is_valid_youtube_link(url):
@@ -41,14 +44,12 @@ def is_valid_youtube_link(url):
     else:
         return False
 
-
 def is_valid_video_link(url):
     pattern = r'^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(&.*)?$'
     if re.match(pattern, url):
         return True
     else:
         return False
-
 
 def get_latest_videos(api_key, id):
     print('meow')
@@ -71,13 +72,13 @@ def get_latest_videos(api_key, id):
         print(f"Error: {response.status_code} - {response.text}")
         return []
 
-
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     kb = [
         [
             types.KeyboardButton(text="Аналитика канала"),
             types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
             types.KeyboardButton(text="Популярные теги"),
             types.KeyboardButton(text="Популярные видео"),
             types.KeyboardButton(text="Сценарий для видео")
@@ -89,43 +90,42 @@ async def send_welcome(message: types.Message):
                         reply_markup=keyboard)
 
 
-@dp.message(lambda message: message.text == "Аналитика канала")
-async def analyze_video(message: types.Message, state: FSMContext):
-    kb = [
-        [
-            types.KeyboardButton(text="Назад"),
-        ],
-    ]
-    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer("Вы выбрали анализ канала. Пожалуйста, отправьте ссылку на канал.", reply_markup=keyboard)
-    await state.set_state(GetChannelLink.waiting_for_channel)
+# @dp.message(lambda message: message.text == "Аналитика канала")
+# async def analyze_video(message: types.Message, state: FSMContext):
+#     kb = [
+#         [
+#             types.KeyboardButton(text="Назад"),
+#         ],
+#     ]
+#     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+#     await message.answer("Вы выбрали анализ канала. Пожалуйста, отправьте ссылку на канал.", reply_markup=keyboard)
+#     await state.set_state(GetChannelLink.waiting_for_channel)
 
-
-@dp.message(GetChannelLink.waiting_for_channel)
-async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
-    link = message.text
-    print(link)
-    if is_valid_youtube_link(link):
-        await message.answer("Ссылка получена")
-        chan_id = get_channel_id(link)
-        info = get_channel_info_by_id(chan_id)
-        items = [f"{key}: {value}" for key, value in info.items()]
-        res = '\n'.join(items)
-        await message.answer(res)
-        await state.set_state(None)
-
-    else:
-        await message.answer("Введена неверная ссылка, повторите попытку")
-        await state.set_state(GetChannelLink.waiting_for_channel)
+# @dp.message(GetChannelLink.waiting_for_channel)
+# async def process_topic(message: types.Message, state: FSMContext):
+#     print("im here")
+#     link = message.text
+#     print(link)
+#     if is_valid_youtube_link(link):
+#         await message.answer("Ссылка получена")
+#         chan_id = get_channel_id(link)
+#         info = get_channel_info_by_id(chan_id)
+#         items = [f"{key}: {value}" for key, value in info.items()]
+#         res = '\n'.join(items)
+#         await message.answer(res)
+#         await state.set_state(None)
+#
+#     else:
+#         await message.answer("Введена неверная ссылка, повторите попытку")
+#         await state.set_state(GetChannelLink.waiting_for_channel)
 
 
 @dp.message(lambda message: message.text == "Назад")
 async def back(message: types.Message):
     kb = [
         [
-            types.KeyboardButton(text="Аналитика канала"),
             types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
             types.KeyboardButton(text="Популярные теги"),
             types.KeyboardButton(text="Популярные видео"),
             types.KeyboardButton(text="Сценарий для видео")
@@ -146,7 +146,6 @@ async def channel_statistics(message: types.Message, state: FSMContext):
     await message.answer("Вы выбрали анализ видео. Пожалуйста, отправьте ссылку на видео.", reply_markup=keyboard)
     await state.set_state(GetVideoLink.waiting_for_video)
 
-
 @dp.message(GetVideoLink.waiting_for_video)
 async def process_topic(message: types.Message, state: FSMContext):
     print("im here")
@@ -158,9 +157,35 @@ async def process_topic(message: types.Message, state: FSMContext):
         await message.answer("Введена неверная ссылка, повторите попытку")
         await state.set_state(GetVideoLink.waiting_for_video)
 
+@dp.message(lambda message: message.text == "Динамика видео")
+async def channel_statistics(message: types.Message, state: FSMContext):
+    kb = [
+        [
+            types.KeyboardButton(text="Назад"),
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await message.answer("Вы выбрали обзор динамики видео. Пожалуйста, отправьте ссылку на список видео, которые хотите отследить.", reply_markup=keyboard)
+    await state.set_state(GetVideosList.waiting_for_videos_list)
+
+@dp.message(GetVideosList.waiting_for_videos_list)
+async def process_topic(message: types.Message, state: FSMContext):
+    print("im here")
+    videos = message.text.split()
+    res = []
+    cnt = 0
+    for link in videos:
+        cnt += 1
+        if is_valid_video_link(link):
+            await message.answer("Ссылка получена")
+            res.append(get_video_id(link))
+            await state.set_state(None)
+        else:
+            await message.answer("Введена неверная ссылка под номером" + str(cnt) + ", повторите попытку")
+            await state.set_state(GetVideoLink.waiting_for_video)
 
 @dp.message(lambda message: message.text == "Популярные теги")
-async def channel_statistics(message: types.Message):
+async def channel_statistics(message: types.Message, state: FSMContext):
     kb = [
         [
             types.KeyboardButton(text="Назад"),
@@ -168,7 +193,23 @@ async def channel_statistics(message: types.Message):
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны")
+    await state.set_state(GetCategoryId.waiting)
 
+@dp.message(GetCategoryId.waiting)
+async def process_topic(message: types.Message, state: FSMContext):
+    print("im here")
+    topic_id = message.text
+    tags = get_tags_list(topic_id)
+    # base_url = "https://www.youtube.com/watch?v="
+    # for video in videos:
+    #     await message.answer(f"{base_url}{video}")
+    #     print(video)
+    print(tags)
+    res = ""
+    for tag in tags:
+        res += (tag[0] + "\n")
+    await message.answer("Вот список самых популярных тегов:" + "\n" + res)
+    await state.set_state(None)
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
@@ -182,6 +223,7 @@ async def process_topic(message: types.Message, state: FSMContext):
     await state.set_state(None)
 
 
+
 @dp.message(lambda message: message.text == "Популярные видео")
 async def channel_statistics(message: types.Message, state: FSMContext):
     kb = [
@@ -192,7 +234,6 @@ async def channel_statistics(message: types.Message, state: FSMContext):
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали список популярных видео. Введите ID категории, видео по которой вам интересны", reply_markup=keyboard)
     await state.set_state(GetTopicId.waiting_for_id)
-
 
 @dp.message(lambda message: message.text == "Сценарий для видео")
 async def channel_statistics(message: types.Message, state: FSMContext):
