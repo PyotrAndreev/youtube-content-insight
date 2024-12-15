@@ -217,11 +217,22 @@ async def process_topic(message: types.Message, state: FSMContext):
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     topic_id = message.text
     videos = get_latest_videos(API_KEY, topic_id)
     base_url = "https://www.youtube.com/watch?v="
     for video in videos:
-        await message.answer(f"{base_url}{video}")
+        await message.answer(f"{base_url}{video}", reply_markup=keyboard)
+
     await state.set_state(None)
 
 
