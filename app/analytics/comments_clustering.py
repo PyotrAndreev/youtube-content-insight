@@ -1,45 +1,17 @@
 import time
 
-from transformers import pipeline
-from transformers import AutoModelForSequenceClassification
-from transformers import BertTokenizerFast
-
-import torch
-import torch.nn.functional as F
-from torch import nn
-from transformers import DataCollatorWithPadding
-
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-import json
 
 from gensim.models import Word2Vec
-from gensim.models.coherencemodel import CoherenceModel
-from gensim.corpora.dictionary import Dictionary
 from nltk.tokenize import word_tokenize
 import nltk
-from sklearn.cluster import DBSCAN, AgglomerativeClustering, KMeans
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 from sklearn.feature_extraction.text import CountVectorizer
-
-from natasha import (
-    Segmenter,
-    MorphVocab,
-    NewsEmbedding,
-    NewsNERTagger,
-    Doc
-)
-
-from matplotlib import pyplot as plt
-import matplotlib.dates as mdates
-
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
-from scipy.stats import shapiro, levene, ttest_ind
-from datetime import datetime, timedelta
 
 import logging
 from g4f.client import Client

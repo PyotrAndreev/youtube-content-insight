@@ -1,5 +1,4 @@
-from fastapi import FastAPI, HTTPException
-from .handlers.request_handlers import get_info_from_last_videos_in_channel
+from fastapi import FastAPI
 from .handlers.request_handlers import get_video_info, get_videos_info
 from .analytics.comments_analytics import comments_emotional_analytics_in_video
 from .analytics.comments_analytics import comments_emotional_analytics_video_to_video
