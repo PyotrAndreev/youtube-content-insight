@@ -47,6 +47,7 @@ from ..models_module import work_with_models
 
 NUMBER_OF_CLUSTERS = 5
 
+
 def comment_vector(tokens, w2v_model):
     """
     Generate a single vector representation of a comment using word embeddings.
