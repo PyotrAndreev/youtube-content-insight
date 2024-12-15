@@ -178,7 +178,7 @@ async def process_topic(message: types.Message, state: FSMContext):
         keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
         photo_path = "app/content/in_video.png"
         await message.answer_photo(
-            types.FSInputFile(path=photo_path), caption=f"Аналитика комментариев для видео{link}", reply_markup=keyboard
+            types.FSInputFile(path=photo_path), caption=f"Аналитика комментариев для видео {link}", reply_markup=keyboard
         )
     else:
         await message.answer("Введена неверная ссылка, повторите попытку")
@@ -206,7 +206,7 @@ async def process_topic(message: types.Message, state: FSMContext):
     for link in videos:
         cnt += 1
         if not is_valid_video_link(link):
-            await message.answer("Введена неверная ссылка под номером" + str(cnt) + ", повторите попытку")
+            await message.answer("Введена неверная ссылка под номером " + str(cnt) + ", повторите попытку")
             await state.set_state(GetVideoLink.waiting_for_video)
             return
         else:
@@ -245,7 +245,6 @@ async def channel_statistics(message: types.Message, state: FSMContext):
 
 @dp.message(GetCategoryId.waiting)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     topic_id = message.text
     tags = get_tags_list(topic_id)
     # base_url = "https://www.youtube.com/watch?v="
@@ -274,8 +273,20 @@ async def process_topic(message: types.Message, state: FSMContext):
     topic_id = message.text
     videos = get_latest_videos(API_KEY, topic_id)
     base_url = "https://www.youtube.com/watch?v="
-    for video in videos:
-        await message.answer(f"{base_url}{video}")
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    for i in range(0, len(videos)):
+        if i == len(videos) - 1:
+            await message.answer(f"{base_url}{videos[i]}", reply_markup=keyboard)
+        await message.answer(f"{base_url}{videos[i]}")
     await state.set_state(None)
 
 
