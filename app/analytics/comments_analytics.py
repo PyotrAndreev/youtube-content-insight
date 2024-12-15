@@ -104,10 +104,13 @@ def sentiment_analytics(sentiments, video_id, timestamp=''):
     answer['timestamp'] = timestamp
     answer['video_id'] = video_id
 
+    logging.info(f"Sentiment analytics done successfully.")
+
     return answer
 
+
 def plot_dynamics_video_to_video(values, title="Динамика значений",
-                  xlabel="Видео", ylabel="Значение"):
+                                 xlabel="Видео", ylabel="Значение"):
     """
     Plot the dynamics of positive, negative, and neutral percentages across videos.
 
@@ -124,7 +127,6 @@ def plot_dynamics_video_to_video(values, title="Динамика значени�
         If either the positive or negative value lists are empty.
     :return: None
     """
-
     videos = [stat['video_id'] for stat in values]
     values1 = [stat['positive_perc'] for stat in values]
     values2 = [stat['negative_perc'] for stat in values]
@@ -149,7 +151,13 @@ def plot_dynamics_video_to_video(values, title="Динамика значени�
     plt.ylabel(ylabel)
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
+
+    plt.savefig("video_to_video.png", format='png', dpi=300)
     plt.show()
+
+    logging.info(f".png file has been saved.")
+
+    plt.close()
 
 
 def plot_dynamics_in_video(values, title="Динамика значений",
@@ -191,27 +199,36 @@ def plot_dynamics_in_video(values, title="Динамика значений",
     plt.ylabel(ylabel)
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
+
+    plt.savefig("in_video.png", format='png', dpi=300)
     plt.show()
+
+    logging.info(f".png file has been saved.")
+
+    plt.close()
 
 
 def normal_dist_test(sample: np.array) -> bool:
-     """
-     Test whether a given sample follows a normal distribution.
+    """
+    Test whether a given sample follows a normal distribution.
 
-     :param sample: Numpy array of sample values.
-     :return: True if the sample follows a normal distribution, False otherwise.
-     """
-     mean_sample = []
-     for i in range(500):
-         subsample = np.random.choice(sample, size=100)
-         mean_sample.append(np.mean(subsample))
+    :param sample: Numpy array of sample values.
+    :return: True if the sample follows a normal distribution, False otherwise.
+    """
+    mean_sample = []
+    for i in range(500):
+        subsample = np.random.choice(sample, size=100)
+        mean_sample.append(np.mean(subsample))
 
-     mean_sample = np.array(mean_sample)
-     result = shapiro(mean_sample).statistic
+    mean_sample = np.array(mean_sample)
+    result = shapiro(mean_sample).statistic
 
-     if result > 0.05:
-         return True
-     return False
+    if result > 0.05:
+        logging.info(f"Normal distribution")
+        return True
+
+    logging.warning(f"NOT normal distribution!")
+    return False
 
 
 def var_equality_test(sample1: np.array, sample2: np.array) -> bool:
@@ -225,7 +242,10 @@ def var_equality_test(sample1: np.array, sample2: np.array) -> bool:
     result = levene(sample1, sample2).statistic
 
     if result > 0.05:
+        logging.info(f"Vars are same.")
         return True
+
+    logging.warning(f"Vars are different!")
     return False
 
 
@@ -250,7 +270,10 @@ def are_emotions_same(s1: np.array, s2: np.array) -> bool:
     print(f't-test pvalue: {result}')
 
     if result > 0.05:
+        logging.info(f"Same emotions")
         return True
+
+    logging.info(f"NOT same emotions")
     return False
 
 
@@ -311,13 +334,14 @@ def get_emotional_dynamics_in_video(video_id, df, start, end, tokenizer, model, 
         else:
             comments = np.concatenate((comments, result))
 
-        analytics = sentiment_analytics(comments, prev_current_time)
+        analytics = sentiment_analytics(comments, video_id, prev_current_time)
         answer.append(analytics)
 
         if iter >= max_iter:
             print('Limit reached')
             break
 
+    logging.info(f"Emotional dynamics within video has been collected.")
     return answer
 
 

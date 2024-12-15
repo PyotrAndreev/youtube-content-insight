@@ -45,6 +45,7 @@ import logging
 from g4f.client import Client
 from ..models_module import work_with_models
 
+NUMBER_OF_CLUSTERS = 5
 
 def comment_vector(tokens, w2v_model):
     """
@@ -56,8 +57,10 @@ def comment_vector(tokens, w2v_model):
     """
     vectors = [w2v_model.wv[word] for word in tokens if word in w2v_model.wv]
     if len(vectors) == 0:
+        logging.warning(f"list of vectors is empty!")
         return np.zeros(w2v_model.vector_size)
     else:
+        logging.info(f"vectors have been collected successfully.")
         return np.mean(vectors, axis=0)
 
 
@@ -75,6 +78,8 @@ def kmeans_clustering(df, comment_vectors, n_clusters=10, max_iter=300):
     comment_vectors_scaled = scaler.fit_transform(comment_vectors)
 
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, max_iter=max_iter).fit(comment_vectors_scaled)
+
+    logging.info(f"Done KMeans.")
 
     return kmeans
 
@@ -140,6 +145,8 @@ def get_bertopic_clusters(df, model: TopicModel):
         if 0.005 * len(df) < topic_model.get_topic_info().iloc[i].Count < 0.4 * len(df) and topic_model.get_topic_info().iloc[i].Count > 10: # and topic_coherence_scores[i] > 0.3
             good_clusters.append(indeces[i])
 
+    logging.info(f"Collected good clusters for BERTopic")
+
     return df.isin({'cluster': good_clusters})
 
 
@@ -164,6 +171,8 @@ def get_kmeans_clusters(df):
     for i in range(len(df['cluster_km'].unique())):
         if 0.005 * len(df) < dict(df['cluster_km'].value_counts())[i] < 0.4 * len(df) and dict(df['cluster_km'].value_counts())[i] > 10: # and topic_coherence_scores[i] > 0.3
             good_clusters.append(i)
+
+    logging.info(f"Collected good clusters for KMeans")
 
     return df[df['cluster_km'].isin(good_clusters)]
 
@@ -194,7 +203,9 @@ def title_clusters(df_bert, df_kmeans):
         )
         title = (response.choices[0].message.content)
         time.sleep(8)
-        answer[title] = km_i
+        answer[title] = (km_i, len(df_kmeans[df_kmeans['cluster_km'] == cluster_id]['textDisplay'].to_list()))
+
+    logging.info(f"KMeans clusters have been titled successfully.")
 
     for cluster_id in tqdm(df_bert['cluster'].unique()):
         bert_i = df_bert[df_bert['cluster'] == cluster_id]['textDisplay'].head(10).to_list()
@@ -209,7 +220,13 @@ def title_clusters(df_bert, df_kmeans):
         title = (response.choices[0].message.content)
         time.sleep(8)
 
-        answer[title] = bert_i
+        answer[title] = (bert_i, len(df_bert[df_bert['cluster'] == cluster_id]['textDisplay'].to_list()))
+
+    logging.info(f"BERTopic clusters have been titled successfully.")
+
+    if (len(answer) > 10):
+        sorted_answer = dict(sorted(answer.items(), key=lambda item: item[1][1]))
+        answer = dict(list(sorted_answer.items())[:NUMBER_OF_CLUSTERS])
 
     return answer
 
@@ -226,6 +243,6 @@ def clustering(video_id: str):
     df_bert = get_bertopic_clusters(df, model)
     df_kmeans = get_kmeans_clusters(df)
     titles = pd.DataFrame(title_clusters(df_bert, df_kmeans))
-    result = titles.iloc[:, : 5]
-    print(result)
-    return result
+    # result = titles.iloc[:, : 5]
+    print(titles.to_string())
+    # return result
