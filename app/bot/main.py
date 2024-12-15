@@ -120,7 +120,8 @@ async def send_welcome(message: types.Message):
 
 
 @dp.message(lambda message: message.text == "Назад")
-async def back(message: types.Message):
+async def back(message: types.Message, state: FSMContext):
+    await state.set_state(None)
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
@@ -191,7 +192,7 @@ async def channel_statistics(message: types.Message, state: FSMContext):
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны")
+    await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны", reply_markup=keyboard)
     await state.set_state(GetCategoryId.waiting)
 
 @dp.message(GetCategoryId.waiting)
@@ -203,12 +204,23 @@ async def process_topic(message: types.Message, state: FSMContext):
     # for video in videos:
     #     await message.answer(f"{base_url}{video}")
     #     print(video)
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     print(tags)
     res = ""
     for tag in tags:
         res += (tag[0] + "\n")
-    await message.answer("Вот список самых популярных тегов:" + "\n" + res)
+    await message.answer("Вот список самых популярных тегов:" + "\n" + res, reply_markup=keyboard)
     await state.set_state(None)
+
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
@@ -254,7 +266,18 @@ async def process_topic(message: types.Message, state: FSMContext):
 
     scenario = generate_scenario(topic)
 
-    await message.answer(scenario)
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+
+    await message.answer(scenario, reply_markup=keyboard)
     await state.set_state(None)
 
 
