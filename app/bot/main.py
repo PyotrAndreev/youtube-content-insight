@@ -52,7 +52,6 @@ def is_valid_video_link(url):
         return False
 
 def get_latest_videos(api_key, id):
-    print('meow')
     url = "https://www.googleapis.com/youtube/v3/search"
     params = {
         'part': 'id',
@@ -103,9 +102,7 @@ async def send_welcome(message: types.Message):
 
 # @dp.message(GetChannelLink.waiting_for_channel)
 # async def process_topic(message: types.Message, state: FSMContext):
-#     print("im here")
 #     link = message.text
-#     print(link)
 #     if is_valid_youtube_link(link):
 #         await message.answer("Ссылка получена")
 #         chan_id = get_channel_id(link)
@@ -121,7 +118,8 @@ async def send_welcome(message: types.Message):
 
 
 @dp.message(lambda message: message.text == "Назад")
-async def back(message: types.Message):
+async def back(message: types.Message, state: FSMContext):
+    await state.set_state(None)
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
@@ -148,7 +146,6 @@ async def channel_statistics(message: types.Message, state: FSMContext):
 
 @dp.message(GetVideoLink.waiting_for_video)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     link = message.text
     if is_valid_video_link(link):
         await message.answer("Ссылка получена")
@@ -170,7 +167,6 @@ async def channel_statistics(message: types.Message, state: FSMContext):
 
 @dp.message(GetVideosList.waiting_for_videos_list)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     videos = message.text.split()
     res = []
     cnt = 0
@@ -192,34 +188,41 @@ async def channel_statistics(message: types.Message, state: FSMContext):
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны")
+    await message.answer("Вы выбрали список популярных тегов. Введите ID категории, теги по которой вам интересны", reply_markup=keyboard)
     await state.set_state(GetCategoryId.waiting)
 
 @dp.message(GetCategoryId.waiting)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     topic_id = message.text
     tags = get_tags_list(topic_id)
     # base_url = "https://www.youtube.com/watch?v="
     # for video in videos:
     #     await message.answer(f"{base_url}{video}")
     #     print(video)
-    print(tags)
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     res = ""
     for tag in tags:
         res += (tag[0] + "\n")
-    await message.answer("Вот список самых популярных тегов:" + "\n" + res)
+    await message.answer("Вот список самых популярных тегов:" + "\n" + res, reply_markup=keyboard)
     await state.set_state(None)
+
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     topic_id = message.text
     videos = get_latest_videos(API_KEY, topic_id)
     base_url = "https://www.youtube.com/watch?v="
     for video in videos:
         await message.answer(f"{base_url}{video}")
-        print(video)
     await state.set_state(None)
 
 
@@ -244,18 +247,27 @@ async def channel_statistics(message: types.Message, state: FSMContext):
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.answer("Вы выбрали написание сценария для видео. Введите тему для видео", reply_markup=keyboard)
-    print("hiiiii")
     await state.set_state(Form.waiting_for_topic)
 
 
 @dp.message(Form.waiting_for_topic)
 async def process_topic(message: types.Message, state: FSMContext):
-    print("im here")
     topic = message.text
 
     scenario = generate_scenario(topic)
 
-    await message.answer(scenario)
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+
+    await message.answer(scenario, reply_markup=keyboard)
     await state.set_state(None)
 
 
