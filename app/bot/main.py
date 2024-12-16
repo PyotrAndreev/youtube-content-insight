@@ -277,6 +277,16 @@ async def process_topic(message: types.Message, state: FSMContext):
 
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
+    kb = [
+        [
+            types.KeyboardButton(text="Аналитика видео"),
+            types.KeyboardButton(text="Динамика видео"),
+            types.KeyboardButton(text="Популярные теги"),
+            types.KeyboardButton(text="Популярные видео"),
+            types.KeyboardButton(text="Сценарий для видео")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     topic_id = message.text
     await message.answer("Стартовал поиск самых популярных видео из категории")
     videos = get_latest_videos(API_KEY, topic_id)
@@ -296,6 +306,7 @@ async def process_topic(message: types.Message, state: FSMContext):
             await message.answer(f"{base_url}{videos[i]}", reply_markup=keyboard)
         else:
             await message.answer(f"{base_url}{videos[i]}")
+
     await state.set_state(None)
 
 
