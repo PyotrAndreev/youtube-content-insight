@@ -211,11 +211,17 @@ def clustering(video_id: str):
     w2v_model = Word2Vec(sentences=df['tokens'], vector_size=100, window=5, min_count=2, sg=1)
     df['comment_vector'] = df['tokens'].apply(lambda tokens: comment_vector(tokens, w2v_model))
 
-    stop_words = np.loadtxt('analytics/stopwords-ru.txt', dtype=str, usecols=0)
+    stop_words = np.loadtxt('app/analytics/stopwords-ru.txt', dtype=str, usecols=0)
     model = TopicModel(stop_words)
     df_bert = get_bertopic_clusters(df, model)
     df_kmeans = get_kmeans_clusters(df)
     titles = pd.DataFrame(title_clusters(df_bert, df_kmeans))
-    # result = titles.iloc[:, : 5]
-    print(titles.to_string())
-    # return result
+    result = []
+    for key, value in titles.items():
+        klaster_line = ""
+        klaster_line += "Кластер - " + key + ":\n"
+        list_of_comments = value[0]
+        for elem in list_of_comments:
+            klaster_line += str(elem) + "\n"
+        result.append(klaster_line)
+    return result

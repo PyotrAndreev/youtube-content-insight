@@ -13,6 +13,7 @@ import os
 from vizualization.dash_vizualize import get_tags_list
 from app.handlers.request_handlers import get_video_analytics
 from app.handlers.request_handlers import get_videos_analytics
+from app.handlers.request_handlers import comment_clustering
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -66,7 +67,7 @@ def get_latest_videos(api_key, id):
     url = "https://www.googleapis.com/youtube/v3/search"
     params = {
         'part': 'id',
-        'maxResults': 10,
+        'maxResults': 5,
         'order': 'rating',
         'videoCategoryId': id,
         'type': 'video',
@@ -178,8 +179,16 @@ async def process_topic(message: types.Message, state: FSMContext):
         keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
         photo_path = "app/content/in_video.png"
         await message.answer_photo(
-            types.FSInputFile(path=photo_path), caption=f"Аналитика комментариев для видео {link}", reply_markup=keyboard
+            types.FSInputFile(path=photo_path), caption=f"Аналитика комментариев для видео {link}"
         )
+        await message.answer("А теперь на очереди кластеризация комментариев данного видео")
+        result = comment_clustering(link)
+        for i in range(len(result)):
+            if i == len(result) - 1:
+                await message.answer(result[i], reply_markup=keyboard)
+            else:
+                await message.answer(result[i])
+        await state.set_state(None)
     else:
         await message.answer("Введена неверная ссылка, повторите попытку")
         await state.set_state(GetVideoLink.waiting_for_video)
@@ -228,6 +237,7 @@ async def process_topic(message: types.Message, state: FSMContext):
     await message.answer_photo(
         types.FSInputFile(path=photo_path), reply_markup=keyboard
     )
+    await state.set_state(None)
 
 
 @dp.message(lambda message: message.text == "Популярные теги")
@@ -247,10 +257,7 @@ async def channel_statistics(message: types.Message, state: FSMContext):
 async def process_topic(message: types.Message, state: FSMContext):
     topic_id = message.text
     tags = get_tags_list(topic_id)
-    # base_url = "https://www.youtube.com/watch?v="
-    # for video in videos:
-    #     await message.answer(f"{base_url}{video}")
-    #     print(video)
+    await message.answer("Стартовал поиск самых популярных тегов для выбранной категории")
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
@@ -271,8 +278,8 @@ async def process_topic(message: types.Message, state: FSMContext):
 @dp.message(GetTopicId.waiting_for_id)
 async def process_topic(message: types.Message, state: FSMContext):
     topic_id = message.text
+    await message.answer("Стартовал поиск самых популярных видео из категории")
     videos = get_latest_videos(API_KEY, topic_id)
-    base_url = "https://www.youtube.com/watch?v="
     kb = [
         [
             types.KeyboardButton(text="Аналитика видео"),
@@ -283,10 +290,12 @@ async def process_topic(message: types.Message, state: FSMContext):
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    base_url = "https://www.youtube.com/watch?v="
     for i in range(0, len(videos)):
         if i == len(videos) - 1:
             await message.answer(f"{base_url}{videos[i]}", reply_markup=keyboard)
-        await message.answer(f"{base_url}{videos[i]}")
+        else:
+            await message.answer(f"{base_url}{videos[i]}")
     await state.set_state(None)
 
 
@@ -318,6 +327,7 @@ async def channel_statistics(message: types.Message, state: FSMContext):
 @dp.message(Form.waiting_for_topic)
 async def process_topic(message: types.Message, state: FSMContext):
     topic = message.text
+    await message.answer("Началась генерация сценария для видео")
 
     scenario = generate_scenario(topic)
 

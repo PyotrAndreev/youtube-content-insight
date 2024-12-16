@@ -188,3 +188,8 @@ def get_videos_analytics(video_urls: [str]):
         video_ids.append(video_id)
         get_video_info(video_id)
     comments_emotional_analytics_video_to_video(video_ids)
+
+
+def comment_clustering(video_url: str):
+    video_id = get_video_id(video_url)
+    return clustering(video_id)
