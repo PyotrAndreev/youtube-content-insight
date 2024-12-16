@@ -11,7 +11,6 @@ def generate_scenario(topic):
         messages=[{"role": "user", "content": "Представь, что ты - профессиональный режиссер, Напиши сценарий видео на,который должен включать в себя завязку, кульминацию и развязку. Уложись в 2000 символов. Тема видео:" + topic}],
         # Add any other necessary parameters
     )
-    print(1)
     scenario = (response.choices[0].message.content)
 
     # response = client.chat.completions.create(
@@ -23,5 +22,4 @@ def generate_scenario(topic):
     # # new_scenario = (response.choices[0].message.content)
     #
     # scenario = (response.choices[0].message.content)
-    print(scenario)
     return scenario
