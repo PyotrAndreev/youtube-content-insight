@@ -116,6 +116,18 @@ def get_channel_id(channel_handle: str):
 
 
 def get_video_id(url):
+    """
+    Extracts the video ID from a YouTube URL.
+
+    The function looks for a YouTube video ID in the provided URL using a regex pattern.
+    A YouTube video ID consists of 11 alphanumeric characters, underscores, or hyphens.
+
+    Args:
+        url (str): The YouTube video URL from which to extract the video ID.
+
+    Returns:
+        str or None: The extracted video ID if found, otherwise None.
+    """
     video_id = None
     match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
     if match:
@@ -176,12 +188,40 @@ def get_video_info(video_id):
 
 
 def get_video_analytics(video_url: str):
+    """
+    Performs analytics on a video by extracting its information and analyzing comments.
+
+    The function:
+    1. Extracts the video ID from the given video URL.
+    2. Retrieves video-related information using the extracted video ID.
+    3. Conducts emotional analytics on comments associated with the video.
+
+    Args:
+        video_url (str): The URL of the video to analyze.
+
+    Returns:
+        None
+    """
     video_id = get_video_id(video_url)
     get_video_info(video_id)
     comments_emotional_analytics_in_video(video_id)
 
 
 def get_videos_analytics(video_urls: [str]):
+    """
+    Performs analytics on multiple videos by extracting their information and analyzing comments collectively.
+
+    This function:
+    1. Iterates through a list of video URLs to extract video IDs.
+    2. Retrieves video-related information for each video using its ID.
+    3. Conducts emotional analytics across the comments for all provided videos.
+
+    Args:
+        video_urls (list[str]): A list of video URLs to process and analyze.
+
+    Returns:
+        None
+    """
     video_ids = []
     for video_url in video_urls:
         video_id = get_video_id(video_url)
@@ -191,5 +231,18 @@ def get_videos_analytics(video_urls: [str]):
 
 
 def comment_clustering(video_url: str):
+    """
+    Performs clustering analysis on the comments of a video.
+
+    The function:
+    1. Extracts the video ID from the provided video URL.
+    2. Applies clustering to the comments associated with the video.
+
+    Args:
+        video_url (str): The URL of the video for which comments will be clustered.
+
+    Returns:
+        Any: The result of the clustering operation. The exact return type depends on the `clustering` function.
+    """
     video_id = get_video_id(video_url)
     return clustering(video_id)

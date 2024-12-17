@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  bot:
+    image: test-bot
+    container_name: tg-bot
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: /bin/sh -c "python app/models_module/db_architecture.py & python -m app.bot.main"
+    networks:
+      - project-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - project-network
+    healthcheck:
+      test: "pg_isready -d $$DB_NAME -U $$POSTGRES_USER"
+      interval: 8s
+      timeout: 5s
+      retries: 5
+
+networks:
+  project-network:
+
