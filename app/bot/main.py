@@ -85,7 +85,7 @@ def get_latest_videos(api_key, id):
 
 
 @dp.message(Command("start"))
-async def send_welcome(message: types.Message):
+async def send_welcome(message: types.Message, state: FSMContext):
     logging.info("Printing start menu")
     kb = [
         [
@@ -97,6 +97,7 @@ async def send_welcome(message: types.Message):
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await state.set_state(None)
 
     await message.reply("Привет!\nЯ - бот-анализатор контента на Ютубе! \nВыберите, что вам интересно узнать",
                         reply_markup=keyboard)
