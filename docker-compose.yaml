@@ -6,9 +6,7 @@ services:
     container_name: bot
     env_file:
       - .env
-    ports:
-      - "8000:8000"
-    command: /bin/sh -c "python app/models_module/db_architecture.py & python -m app.bot.main"
+    command: /bin/sh -c "mkdir app/content & python app/models_module/db_architecture.py & python -m app.bot.main"
     networks:
       - project-network
     depends_on:
